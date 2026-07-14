@@ -2,14 +2,14 @@
     
 <a href="https://buymeacoffee.com/abdullaherturk" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
+# RDS Gen 🔑
+
 ![sample](https://github.com/abdullah-erturk/RDS-Gen/blob/main/RDSGen.jpg)
 
 ## Download Link:
 
 [![Stable?](https://img.shields.io/badge/Release-v1.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
 </div>
-
-# RDS Gen 🔑
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue.svg)
