@@ -118,7 +118,7 @@ A special thanks to the following individuals for their amazing work and contrib
 *GUI and PowerShell integration coded by [Abdullah ERTÜRK](https://github.com/abdullah-erturk).*
 </details>
 
---
+---
 
 <div align="center">
 
