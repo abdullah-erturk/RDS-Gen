@@ -28,6 +28,9 @@ Web tabanlı alternatiflerinin aksine, bu araç tamamen bilgisayarınızda yerel
 Bu proje, **[WitherOrNot](https://github.com/WitherOrNot)** tarafından yapılan temel kriptografik araştırmalara dayanmaktadır. WitherOrNot, bu araştırmasıyla Python dilinde bir PoC (Kavram Kanıtı) komut satırı aracı geliştirmiştir (orijinal haline [GitHub Gist](https://gist.github.com/WitherOrNot/c34c4c7b893e89ab849ce04e007d89a9) üzerinden ulaşılabilir).
 Kriptografi kodlarının C# diline uyarlanması ve ilk web arayüzünün oluşturulması ise **[Lyssa (thecatontheceiling)](https://github.com/thecatontheceiling)** tarafından yapılmıştır.
 
+## Yasal Uyarı / Eğitim Amacı
+Bu çalışma tamamen **eğitim ve araştırma amacıyla** hazırlanmıştır. Lütfen bu aracı kullanırken Microsoft'un mevcut lisans sözleşmelerine ve kullanım şartlarına (EULA) uyunuz. Geliştiriciler, bu aracın amacı dışında kullanılmasından doğacak herhangi bir yasal sorumluluğu kabul etmez.
+
 ## Ekstra: RDS Lisanslamasını Tamamen Sıfırlama
 Eğer mevcut RDS lisansını tamamen kaldırmak, eski lisansların tüm izlerini temizlemek ve sıfırdan yeniden kurmak isterseniz, Yönetici olarak (Administrator) PowerShell'i açıp aşağıdaki adımları uygulayabilirsiniz:
 
@@ -79,6 +82,9 @@ Unlike web-based implementations, this tool runs entirely locally on your Window
 ## Technical Basis
 This project leverages the foundational cryptographic research conducted by **[WitherOrNot](https://github.com/WitherOrNot)**, who developed the original Proof-of-Concept CLI tool in Python (available in his [GitHub gist](https://gist.github.com/WitherOrNot/c34c4c7b893e89ab849ce04e007d89a9)). 
 The C# cryptography port was originally created by **[Lyssa (thecatontheceiling)](https://github.com/thecatontheceiling)**.
+
+## Disclaimer / Educational Purpose
+This project is strictly for **educational and research purposes**. Please adhere to Microsoft's current licensing agreements and terms of use (EULA) when using this tool. The developers assume no legal responsibility for any misuse of this tool.
 
 ## Extra: Completely Resetting RDS Licensing
 If you wish to completely remove the existing RDS Licensing role, clear all traces of your old licenses, and reinstall it from scratch, you can run the following PowerShell commands as Administrator:
