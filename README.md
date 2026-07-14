@@ -61,7 +61,7 @@ Start-Service TermServLicensing
 Katkılarından ve muazzam çalışmalarından dolayı aşağıdaki kişilere özel teşekkürler:
 * **[WitherOrNot](https://github.com/WitherOrNot)** - Temel kriptografi araştırması ve orijinal kod katkıları.
 * **[Lyssa (thecatontheceiling)](https://github.com/thecatontheceiling)** - Kodun C# uyarlaması ve web tabanlı temel proje.
-* **[asdcorp](https://github.com/asdcorp)** - Kurulum konusundaki ilk yardımları.
+* **[asdcorp](https://github.com/asdcorp)** - Orijinal projenin temellerine olan katkıları.
 
 *Kullanıcı arayüzü ve PowerShell entegrasyonu [Abdullah ERTÜRK](https://github.com/abdullah-erturk) tarafından kodlanmıştır.*
 </details>
@@ -113,7 +113,7 @@ Start-Service TermServLicensing
 A special thanks to the following individuals for their amazing work and contributions:
 * **[WitherOrNot](https://github.com/WitherOrNot)** - Foundational research and original code contributions.
 * **[Lyssa (thecatontheceiling)](https://github.com/thecatontheceiling)** - Original C# port and the base web implementation.
-* **[asdcorp](https://github.com/asdcorp)** - Initial assistance with getting the setup.
+* **[asdcorp](https://github.com/asdcorp)** - Contributions to the foundation of the original project.
 
 *GUI and PowerShell integration coded by [Abdullah ERTÜRK](https://github.com/abdullah-erturk).*
 </details>
