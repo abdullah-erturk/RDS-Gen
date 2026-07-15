@@ -1359,7 +1359,7 @@ $iPhase1.Add_Click({
         reg delete "HKLM\SOFTWARE\Microsoft\TermServLicensing" /f 2>$null
         reg delete "HKLM\SYSTEM\CurrentControlSet\Services\TermServLicensing" /f 2>$null
         
-        if($script:isTr) { $txtLogs.Text += "RDS Lisanslama rolü kaldırılıyor, lütfen bekleyin...`r`n" } else { $txtLogs.Text += "Uninstalling RDS Licensing role, lütfen bekleyin...`r`n" }
+        if($script:isTr) { $txtLogs.Text += "RDS Lisanslama rolü kaldırılıyor, lütfen bekleyin...`r`n" } else { $txtLogs.Text += "Uninstalling RDS Licensing role, please wait...`r`n" }
         $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
         [System.Windows.Forms.Application]::DoEvents()
         Uninstall-WindowsFeature -Name RDS-Licensing
