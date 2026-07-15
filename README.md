@@ -8,7 +8,7 @@
 
 ## Download Link:
 
-[![Stable?](https://img.shields.io/badge/Release-v1.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
+[![Stable?](https://img.shields.io/badge/Release-v3.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
 
 <br>
 <details>
@@ -18,6 +18,7 @@
 | :---: | :--- |
 | **v1** | 🇹🇷 İlk Sürüm <hr> 🇬🇧 First Release |
 | **v2** | 🇹🇷 Karanlık tema arayüzü, uygulama içi dil seçeneği (EN/TR), lisans sıfırlama aracı entegrasyonu ve çıktı kutusu düzeltmeleri eklendi. <hr> 🇬🇧 Dark Theme GUI, in-app language toggle (EN/TR), integrated license reset tool, and output box fixes added. |
+| **v3** | 🇹🇷 İşletim sistemi güvenlik kontrolü eklendi (İşlemlerin Windows 10/11'de hataya yol açmasını engeller). <hr> 🇬🇧 Added OS validation check (prevents feature errors on non-server OS like Win 10/11). |
 
 </details>
 
