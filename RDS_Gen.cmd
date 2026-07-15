@@ -80,7 +80,7 @@ public class Curve {
         return r;
     }
 }
-﻿public class LyssaCrypto {
+public class LyssaCrypto {
 
     public static byte[] BigIntToBytesLE(BigInteger n, int l) {
         if (n < 0) n = -n;
@@ -373,104 +373,579 @@ public class Curve {
 [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null
 [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing") | Out-Null
 
+$win32ScrollCode = @'
+using System;
+using System.Runtime.InteropServices;
+public class Win32Scroll {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, IntPtr wParam, IntPtr lParam);
+}
+'@
+Add-Type -TypeDefinition $win32ScrollCode | Out-Null
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$ScriptPath`"" -Verb RunAs
+    exit
+}
+
 $lang = [System.Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName
 $isTr = ($lang -eq "tr")
 
-$strings = @{
-    Title = if($isTr) { "RDS Gen - made by Abdullah ERTÜRK" } else { "RDS Gen - made by Abdullah ERTÜRK" }
-    PidLabel = if($isTr) { "Product ID (PID):" } else { "Product ID (PID):" }
-    PidPlaceholder = if($isTr) { "Örn: 00490-92005-99454-AT527" } else { "e.g., 00490-92005-99454-AT527" }
-    SpkBtn = if($isTr) { "Lisans Sunucu Kimliği (SPK) Üret" } else { "Generate License Server ID (SPK)" }
-    LkpGroup = if($isTr) { "Lisans Anahtar Paketi (LKP) Üret" } else { "Generate License Key Pack (LKP)" }
-    CountLabel = if($isTr) { "Lisans Sayısı:" } else { "License Count:" }
-    VerLabel = if($isTr) { "Lisans Sürümü ve Tipi:" } else { "License Version and Type:" }
-    LkpBtn = if($isTr) { "Lisans Anahtar Paketi (LKP) Üret" } else { "Generate License Key Pack (LKP)" }
-    OutputLabel = if($isTr) { "Çıktı:" } else { "Output:" }
-    Working = if($isTr) { "Üretiliyor, lütfen bekleyin..." } else { "Working, please wait..." }
-    ErrPidReq = if($isTr) { "Hata: Product ID (PID) gerekli." } else { "Error: Product ID (PID) is required." }
-    ErrLkpReq = if($isTr) { "Hata: PID, Sayı ve Sürüm gerekli." } else { "Error: PID, Count and Version required." }
-    ErrFormat = if($isTr) { "Hata: Geçersiz giriş formatı." } else { "Error: Invalid input format." }
-    AboutBtn = if($isTr) { "Hakkında" } else { "About" }
-    AboutTitle = if($isTr) { "Hakkında" } else { "About" }
-    AboutText = if($isTr) { "Coded by Abdullah ERTÜRK`r`ngithub.com/abdullah-erturk`r`nerturk-dev.netlify.app`r`n`r`nTeşekkürler WitherOrNot ve Lyssa (thecatontheceiling)" } else { "Coded by Abdullah ERTÜRK`r`ngithub.com/abdullah-erturk`r`nerturk-dev.netlify.app`r`n`r`nThanks to WitherOrNot and Lyssa (thecatontheceiling)" }
-    HelpBtn = if($isTr) { "Yardım" } else { "Help" }
-    HelpTitle = if($isTr) { "Kullanım Kılavuzu" } else { "Usage Guide" }
-    HelpText = if($isTr) { "• İşletim sistemi tarafında RDS lisans etkinleştirilirken 'Telefon ile Etkinleştirme' seçilmelidir.`r`n`r`n• Lisans Yöneticisindeki Sunucu Ürün Kimliğini (PID) kopyalayarak bu araçtaki 'Product ID (PID)' alanına yapıştırın.`r`n`r`n• Önce 'Lisans Sunucu Kimliği (SPK) Üret' butonuna tıklayıp sunucunuzu etkinleştirin.`r`n`r`n• Ardından ihtiyacınız olan Lisans Sayısı ve Sürümü seçerek LKP kodunu üretip lisanslarınızı kurabilirsiniz." } else { "• When activating the RDS license on the operating system side, 'Telephone Activation' must be selected.`r`n`r`n• Copy the Server Product ID (PID) from the License Manager and paste it into the 'Product ID (PID)' field in this tool.`r`n`r`n• First, click the 'Generate License Server ID (SPK)' button to activate your server.`r`n`r`n• Then select the required License Count and Version to generate the LKP code and install your licenses." }
+function Update-Language {
+    $script:strings = @{
+        Title = if($script:isTr) { "RDS Gen - made by Abdullah ERTÜRK" } else { "RDS Gen - made by Abdullah ERTÜRK" }
+        PidLabel = if($script:isTr) { "Product ID (PID):" } else { "Product ID (PID):" }
+        PidPlaceholder = if($script:isTr) { "Örn: 00490-92005-99454-AT527" } else { "e.g., 00490-92005-99454-AT527" }
+        SpkBtn = if($script:isTr) { "Lisans Sunucu Kimliği (SPK) Oluştur" } else { "Create License Server ID (SPK)" }
+        LkpGroup = if($script:isTr) { "Lisans Anahtar Paketi (LKP)" } else { "License Key Pack (LKP)" }
+        CountLabel = if($script:isTr) { "Lisans Sayısı:" } else { "License Count:" }
+        VerLabel = if($script:isTr) { "Lisans Sürümü ve Tipi:" } else { "License Version and Type:" }
+        LkpBtn = if($script:isTr) { "Lisans Anahtar Paketi (LKP) Oluştur" } else { "Create License Key Pack (LKP)" }
+        OutputLabel = if($script:isTr) { "Çıktı:" } else { "Output:" }
+        Working = if($script:isTr) { "Üretiliyor, lütfen bekleyin..." } else { "Working, please wait..." }
+        ErrPidReq = if($script:isTr) { "Hata: Product ID (PID) gerekli." } else { "Error: Product ID (PID) is required." }
+        ErrLkpReq = if($script:isTr) { "Hata: PID, Sayı ve Sürüm gerekli." } else { "Error: PID, Count and Version required." }
+        ErrFormat = if($script:isTr) { "Hata: Geçersiz giriş formatı." } else { "Error: Invalid input format." }
+        AboutBtn = if($script:isTr) { "Hakkında" } else { "About" }
+        AboutTitle = if($script:isTr) { "Hakkında" } else { "About" }
+        AboutText = if($script:isTr) { "Coded by Abdullah ERTÜRK`r`ngithub.com/abdullah-erturk`r`nerturk-dev.netlify.app`r`n`r`nTeşekkürler WitherOrNot ve Lyssa (thecatontheceiling)" } else { "Coded by Abdullah ERTÜRK`r`ngithub.com/abdullah-erturk`r`nerturk-dev.netlify.app`r`n`r`nThanks to WitherOrNot and Lyssa (thecatontheceiling)" }
+        HelpBtn = if($script:isTr) { "Yardım" } else { "Help" }
+        HelpTitle = if($script:isTr) { "Kullanım Kılavuzu" } else { "Usage Guide" }
+        HelpText = if($script:isTr) { "  İşletim sistemi tarafında RDS lisans etkinleştirilirken 'Telefon ile Etkinleştirme' seçilmelidir.`r`n`r`n  Lisans Yöneticisindeki Sunucu Ürün Kimliğini (PID) kopyalayarak bu araçtaki 'Product ID (PID)' alanına yapıştırın.`r`n`r`n  Önce 'Lisans Sunucu Kimliği (SPK) Üret' butonuna tıklayıp sunucunuzu etkinleştirin.`r`n`r`n  Ardından ihtiyacınız olan Lisans Sayısı ve Sürümü seçerek LKP kodunu üretip lisanslarınızı kurabilirsiniz." } else { "  When activating the RDS license on the operating system side, 'Telephone Activation' must be selected.`r`n`r`n  Copy the Server Product ID (PID) from the License Manager and paste it into the 'Product ID (PID)' field in this tool.`r`n`r`n  First, click the 'Generate License Server ID (SPK)' button to activate your server.`r`n`r`n  Then select the required License Count and Version to generate the LKP code and install your licenses." }
+        Phase1 = if($script:isTr) { "RDS Sıfırla (Adım 1: Kaldır ve Yeniden Başlat)" } else { "Reset RDS (Step 1: Uninstall & Restart)" }
+        Phase2 = if($script:isTr) { "RDS Sıfırla (Adım 2: Kur ve Başlat)" } else { "Reset RDS (Step 2: Install & Start)" }
+        Phase1Msg = if($script:isTr) { "Bu işlem RDS Lisanslama rolünü sistemden silecek. Sunucunun yeniden başlatılması gerekecek. Devam edilsin mi?" } else { "This will remove the RDS Licensing role. The server will need to be restarted. Continue?" }
+        Phase2Msg = if($script:isTr) { "RDS Lisanslama rolü yeniden kurulacak. İşlem 1-2 dakika sürebilir. Devam edilsin mi?" } else { "RDS Licensing role will be reinstalled. This may take 1-2 minutes. Continue?" }
+        Phase2Success = if($script:isTr) { "Kurulum tamamlandı ve servis başlatıldı." } else { "Installation completed and service started." }
+        SaveSuccess = if($script:isTr) { "Lisans kodları başarıyla kaydedildi:`r`n" } else { "License codes saved successfully:`r`n" }
+        SaveError = if($script:isTr) { "Dosya kaydedilirken bir hata oluştu!`r`n" } else { "An error occurred while saving the file!`r`n" }
+        CopySpkSuccess = if($script:isTr) { "SPK başarıyla kopyalandı!" } else { "SPK copied successfully!" }
+        CopyLkpSuccess = if($script:isTr) { "LKP başarıyla kopyalandı!" } else { "LKP copied successfully!" }
+        WarningTitle = if($script:isTr) { "Uyarı" } else { "Warning" }
+        InfoTitle = if($script:isTr) { "Bilgi" } else { "Info" }
+        SuccessTitle = if($script:isTr) { "Başarılı" } else { "Success" }
+        ErrorTitle = if($script:isTr) { "Hata" } else { "Error" }
+        ErrNoPidSys = if($script:isTr) { "Sistemden Product ID alınamadı." } else { "Could not retrieve Product ID from system." }
+        ErrRegAcc = if($script:isTr) { "Kayıt defterine erişilirken bir hata oluştu." } else { "Error accessing registry." }
+        ErrNoSave = if($script:isTr) { "Kaydedilecek lisans kodu bulunamadı!" } else { "No license code found to save!" }
+        TitlePid = if($script:isTr) { "Product ID (PID) Nasıl Bulunur?" } else { "How to find Product ID (PID)?" }
+        TitleCount = if($script:isTr) { "Lisans Sayısı Nedir?" } else { "What is License Count?" }
+        TitleVer = if($script:isTr) { "Lisans Sürümü ve Tipi Nedir?" } else { "What is License Version and Type?" }
+        CtxCopy = if($script:isTr) { "Kopyala" } else { "Copy" }
+        CtxPaste = if($script:isTr) { "Yapıştır" } else { "Paste" }
+        CtxSelectAll = if($script:isTr) { "Tümünü Seç" } else { "Select All" }
+    }
+    if ($form) { $form.Text = $script:strings.Title }
+    if ($titleLabel) { $titleLabel.Text = $script:strings.Title }
+    if ($lblPid) { $lblPid.Text = $script:strings.PidLabel }
+    if ($btnSpk) { $btnSpk.Text = $script:strings.SpkBtn }
+    if ($grpLkp) { $grpLkp.Text = $script:strings.LkpGroup }
+    if ($lblCount) { $lblCount.Text = $script:strings.CountLabel }
+    if ($lblVer) { $lblVer.Text = $script:strings.VerLabel }
+    if ($btnLkp) { $btnLkp.Text = $script:strings.LkpBtn }
+    if ($lblSpkOut) { $lblSpkOut.Text = $script:strings.OutputLabel }
+    if ($lblLkpOut) { $lblLkpOut.Text = $script:strings.OutputLabel }
+    if ($btnSave) {
+        if($script:isTr) { $btnSave.Text = "Kaydet" } else { $btnSave.Text = "Save" }
+    }
+    if ($btnAbout) { $btnAbout.Text = $script:strings.AboutBtn }
+    if ($btnHelp) { $btnHelp.Text = $script:strings.HelpBtn }
+    if ($grpSpk) {
+        if($script:isTr) { $grpSpk.Text = "SPK İşlemleri" } else { $grpSpk.Text = "SPK Operations" }
+    }
+    if ($btnLang) {
+        if($script:isTr) { $btnLang.Text = "EN" } else { $btnLang.Text = "TR" }
+    }
+    if ($iPhase1) { $iPhase1.Text = $script:strings.Phase1 }
+    if ($iPhase2) { $iPhase2.Text = $script:strings.Phase2 }
+    if ($iCopy) { $iCopy.Text = $script:strings.CtxCopy }
+    if ($iPaste) { $iPaste.Text = $script:strings.CtxPaste }
+    if ($iSelect) { $iSelect.Text = $script:strings.CtxSelectAll }
+    if ($iCopy2) { $iCopy2.Text = $script:strings.CtxCopy }
+    if ($iSelect2) { $iSelect2.Text = $script:strings.CtxSelectAll }
 }
+Update-Language
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $strings.Title
-$form.Size = New-Object System.Drawing.Size(450, 550)
+$form.Size = New-Object System.Drawing.Size(390, 605)
 $form.StartPosition = "CenterScreen"
-$form.FormBorderStyle = "FixedDialog"
-$form.MaximizeBox = $false
+$form.FormBorderStyle = "None"
+$form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$form.Opacity = 0
+$form.Add_Load({
+    $script:fadeTimer = New-Object System.Windows.Forms.Timer
+    $script:fadeTimer.Interval = 10
+    $script:fadeTimer.Add_Tick({
+        $form.Opacity += 0.05
+        if ($form.Opacity -ge 1) {
+            $script:fadeTimer.Stop()
+            $script:fadeTimer.Dispose()
+        }
+    })
+    $script:fadeTimer.Start()
+})
+
+$form.Add_Paint({
+    param($sender, $e)
+    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::Gray, 1)
+    $e.Graphics.DrawRectangle($pen, 0, 0, ($form.Width - 1), ($form.Height - 1))
+})
+
+$titleBar = New-Object System.Windows.Forms.Panel
+$titleBar.Height = 30
+$titleBar.Dock = [System.Windows.Forms.DockStyle]::Top
+$titleBar.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+
+$titleLabel = New-Object System.Windows.Forms.Label
+$titleLabel.Text = $strings.Title
+$titleLabel.Location = New-Object System.Drawing.Point(10, 5)
+$titleLabel.AutoSize = $true
+$titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+$titleLabel.ForeColor = [System.Drawing.Color]::White
+$titleLabel.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$titleBar.Controls.Add($titleLabel)
+
+$btnClose = New-Object System.Windows.Forms.Button
+$btnClose.Text = "X"
+$btnClose.Width = 40
+$btnClose.Dock = [System.Windows.Forms.DockStyle]::Right
+$btnClose.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnClose.FlatAppearance.BorderSize = 0
+$btnClose.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$btnClose.ForeColor = [System.Drawing.Color]::White
+$btnClose.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnClose.Add_Click({ $form.Close() })
+$btnClose.Add_MouseEnter({ $btnClose.BackColor = [System.Drawing.Color]::Red })
+$btnClose.Add_MouseLeave({ $btnClose.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48) })
+
+$btnMinimize = New-Object System.Windows.Forms.Button
+$btnMinimize.Text = "-"
+$btnMinimize.Width = 40
+$btnMinimize.Dock = [System.Windows.Forms.DockStyle]::Right
+$btnMinimize.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnMinimize.FlatAppearance.BorderSize = 0
+$btnMinimize.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$btnMinimize.ForeColor = [System.Drawing.Color]::White
+$btnMinimize.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnMinimize.Add_Click({ $form.WindowState = [System.Windows.Forms.FormWindowState]::Minimized })
+$btnMinimize.Add_MouseEnter({ $btnMinimize.BackColor = [System.Drawing.Color]::FromArgb(63, 63, 65) })
+$btnMinimize.Add_MouseLeave({ $btnMinimize.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48) })
+
+$btnLang = New-Object System.Windows.Forms.Button
+if ($isTr) {
+    $btnLang.Text = 'EN'
+} else {
+    $btnLang.Text = 'TR'
+}
+$btnLang.Width = 40
+$btnLang.Dock = [System.Windows.Forms.DockStyle]::Right
+$btnLang.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnLang.FlatAppearance.BorderSize = 0
+$btnLang.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$btnLang.ForeColor = [System.Drawing.Color]::White
+$btnLang.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnLang.Add_MouseEnter({ $btnLang.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 65) })
+$btnLang.Add_MouseLeave({ $btnLang.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48) })
+$btnLang.Add_Click({
+    $script:isTr = -not $script:isTr
+    Update-Language
+})
+$titleBar.Controls.Add($btnLang)
+$titleBar.Controls.Add($btnMinimize)
+$titleBar.Controls.Add($btnClose)
+
+$dragAction = {
+    param($sender, $e)
+    if($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+        $script:drag = $true
+        $script:dragCursor = [System.Windows.Forms.Cursor]::Position
+        $script:dragFormLoc = $sender.FindForm().Location
+    }
+}
+$moveAction = {
+    param($sender, $e)
+    if($script:drag) {
+        $newX = $script:dragFormLoc.X + ([System.Windows.Forms.Cursor]::Position.X - $script:dragCursor.X)
+        $newY = $script:dragFormLoc.Y + ([System.Windows.Forms.Cursor]::Position.Y - $script:dragCursor.Y)
+        $sender.FindForm().Location = New-Object System.Drawing.Point($newX, $newY)
+    }
+}
+$upAction = {
+    $script:drag = $false
+}
+
+$titleBar.Add_MouseDown($dragAction)
+$titleBar.Add_MouseMove($moveAction)
+$titleBar.Add_MouseUp($upAction)
+$titleLabel.Add_MouseDown($dragAction)
+$titleLabel.Add_MouseMove($moveAction)
+$titleLabel.Add_MouseUp($upAction)
+
+$form.Controls.Add($titleBar)
+
+$mainPanel = New-Object System.Windows.Forms.Panel
+$mainPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+$mainPanel.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$form.Controls.Add($mainPanel)
+$mainPanel.BringToFront()
 
 $fontBold = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $fontNormal = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
 
+$ctxRenderer = New-Object System.Windows.Forms.ToolStripSystemRenderer
+
+$ctxEditable = New-Object System.Windows.Forms.ContextMenuStrip
+$ctxEditable.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$ctxEditable.ForeColor = [System.Drawing.Color]::White
+$ctxEditable.ShowImageMargin = $false
+$ctxEditable.Renderer = $ctxRenderer
+$iCopy = $ctxEditable.Items.Add($script:strings.CtxCopy)
+$iCopy.Add_Click({ if ($ctxEditable.SourceControl.SelectionLength -gt 0) { $ctxEditable.SourceControl.Copy() } })
+$iPaste = $ctxEditable.Items.Add($script:strings.CtxPaste)
+$iPaste.Add_Click({ $ctxEditable.SourceControl.Paste() })
+$iSelect = $ctxEditable.Items.Add($script:strings.CtxSelectAll)
+$iSelect.Add_Click({ $ctxEditable.SourceControl.SelectAll() })
+
+$ctxReadOnly = New-Object System.Windows.Forms.ContextMenuStrip
+$ctxReadOnly.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$ctxReadOnly.ForeColor = [System.Drawing.Color]::White
+$ctxReadOnly.ShowImageMargin = $false
+$ctxReadOnly.Renderer = $ctxRenderer
+$iCopy2 = $ctxReadOnly.Items.Add($script:strings.CtxCopy)
+$iCopy2.Add_Click({ if ($ctxReadOnly.SourceControl.SelectionLength -gt 0) { $ctxReadOnly.SourceControl.Copy() } })
+$iSelect2 = $ctxReadOnly.Items.Add($script:strings.CtxSelectAll)
+$iSelect2.Add_Click({ $ctxReadOnly.SourceControl.SelectAll() })
+
+function Show-CustomMsgBox {
+    param(
+        [string]$message,
+        [string]$title,
+        [string]$buttons = "OK"
+    )
+    
+    $msgForm = New-Object System.Windows.Forms.Form
+    $msgForm.Text = $title
+    $msgForm.StartPosition = "CenterParent"
+    $msgForm.FormBorderStyle = "None"
+    $msgForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $msgForm.ShowInTaskbar = $false
+    $msgForm.Opacity = 0
+    $msgForm.KeyPreview = $true
+    $msgForm.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape -or $e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            $msgForm.Close()
+        }
+    })
+    $msgForm.Add_Load({
+        $script:fadeTimerMsg = New-Object System.Windows.Forms.Timer
+        $script:fadeTimerMsg.Interval = 10
+        $script:fadeTimerMsg.Add_Tick({
+            $msgForm.Opacity += 0.1
+            if ($msgForm.Opacity -ge 1) {
+                $script:fadeTimerMsg.Stop()
+                $script:fadeTimerMsg.Dispose()
+            }
+        })
+        $script:fadeTimerMsg.Start()
+    })
+
+    $titlePanel = New-Object System.Windows.Forms.Panel
+    $titlePanel.Size = New-Object System.Drawing.Size(350, 30)
+    $titlePanel.Location = New-Object System.Drawing.Point(0, 0)
+    $titlePanel.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+    $titlePanel.Add_MouseDown({ $script:draggingMsg = $true; $script:dragCursorMsg = [System.Windows.Forms.Cursor]::Position; $script:dragFormMsg = $msgForm.Location })
+    $titlePanel.Add_MouseMove({ if ($script:draggingMsg) { $msgForm.Location = New-Object System.Drawing.Point($script:dragFormMsg.X + ([System.Windows.Forms.Cursor]::Position.X - $script:dragCursorMsg.X), $script:dragFormMsg.Y + ([System.Windows.Forms.Cursor]::Position.Y - $script:dragCursorMsg.Y)) } })
+    $titlePanel.Add_MouseUp({ $script:draggingMsg = $false })
+    $msgForm.Controls.Add($titlePanel)
+
+    $titleLabel = New-Object System.Windows.Forms.Label
+    $titleLabel.Text = $title
+    $titleLabel.ForeColor = [System.Drawing.Color]::White
+    $titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $titleLabel.Location = New-Object System.Drawing.Point(10, 7)
+    $titleLabel.AutoSize = $true
+    $titleLabel.Add_MouseDown({ $script:draggingMsg = $true; $script:dragCursorMsg = [System.Windows.Forms.Cursor]::Position; $script:dragFormMsg = $msgForm.Location })
+    $titleLabel.Add_MouseMove({ if ($script:draggingMsg) { $msgForm.Location = New-Object System.Drawing.Point($script:dragFormMsg.X + ([System.Windows.Forms.Cursor]::Position.X - $script:dragCursorMsg.X), $script:dragFormMsg.Y + ([System.Windows.Forms.Cursor]::Position.Y - $script:dragCursorMsg.Y)) } })
+    $titleLabel.Add_MouseUp({ $script:draggingMsg = $false })
+    $titlePanel.Controls.Add($titleLabel)
+
+    $btnClose = New-Object System.Windows.Forms.Label
+    $btnClose.Text = "X"
+    $btnClose.ForeColor = [System.Drawing.Color]::White
+    $btnClose.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $btnClose.Location = New-Object System.Drawing.Point(325, 7)
+    $btnClose.AutoSize = $true
+    $btnClose.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $btnClose.Add_Click({ $msgForm.Close() })
+    $titlePanel.Controls.Add($btnClose)
+
+    $lblMsg = New-Object System.Windows.Forms.Label
+    $lblMsg.Text = $message
+    $lblMsg.ForeColor = [System.Drawing.Color]::White
+    $lblMsg.Font = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Regular)
+    $lblMsg.Location = New-Object System.Drawing.Point(20, 50)
+    $lblMsg.MaximumSize = New-Object System.Drawing.Size(310, 0)
+    $lblMsg.AutoSize = $true
+    $msgForm.Controls.Add($lblMsg)
+
+    $reqHeight = $lblMsg.PreferredHeight + 110
+    if ($reqHeight -lt 140) { $reqHeight = 140 }
+
+    $msgForm.Size = New-Object System.Drawing.Size(350, $reqHeight)
+
+    $script:msgResult = ""
+
+    if ($buttons -eq "YesNo") {
+        $btnYes = New-Object System.Windows.Forms.Button
+        if($script:isTr) { $btnYes.Text = "Evet" } else { $btnYes.Text = "Yes" }
+        $btnYes.Location = New-Object System.Drawing.Point(160, ($reqHeight - 45))
+        $btnYes.Size = New-Object System.Drawing.Size(80, 30)
+        $btnYes.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $btnYes.FlatAppearance.BorderSize = 0
+        $btnYes.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80)
+        $btnYes.ForeColor = [System.Drawing.Color]::White
+        $btnYes.Cursor = [System.Windows.Forms.Cursors]::Hand
+        $btnYes.Add_MouseEnter({ $this.BackColor = [System.Drawing.Color]::FromArgb(95, 95, 100) })
+        $btnYes.Add_MouseLeave({ $this.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80) })
+        $btnYes.Add_Click({ $script:msgResult = "Yes"; $msgForm.Close() })
+        $msgForm.Controls.Add($btnYes)
+
+        $btnNo = New-Object System.Windows.Forms.Button
+        if($script:isTr) { $btnNo.Text = "Hayır" } else { $btnNo.Text = "No" }
+        $btnNo.Location = New-Object System.Drawing.Point(250, ($reqHeight - 45))
+        $btnNo.Size = New-Object System.Drawing.Size(80, 30)
+        $btnNo.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $btnNo.FlatAppearance.BorderSize = 0
+        $btnNo.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80)
+        $btnNo.ForeColor = [System.Drawing.Color]::White
+        $btnNo.Cursor = [System.Windows.Forms.Cursors]::Hand
+        $btnNo.Add_MouseEnter({ $this.BackColor = [System.Drawing.Color]::FromArgb(95, 95, 100) })
+        $btnNo.Add_MouseLeave({ $this.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80) })
+        $btnNo.Add_Click({ $script:msgResult = "No"; $msgForm.Close() })
+        $msgForm.Controls.Add($btnNo)
+    } else {
+        $btnOk = New-Object System.Windows.Forms.Button
+        if($script:isTr) { $btnOk.Text = "Tamam" } else { $btnOk.Text = "OK" }
+        $btnOk.Location = New-Object System.Drawing.Point(250, ($reqHeight - 45))
+        $btnOk.Size = New-Object System.Drawing.Size(80, 30)
+        $btnOk.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $btnOk.FlatAppearance.BorderSize = 0
+        $btnOk.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80)
+        $btnOk.ForeColor = [System.Drawing.Color]::White
+        $btnOk.Cursor = [System.Windows.Forms.Cursors]::Hand
+        $btnOk.Add_MouseEnter({ $this.BackColor = [System.Drawing.Color]::FromArgb(95, 95, 100) })
+        $btnOk.Add_MouseLeave({ $this.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80) })
+        $btnOk.Add_Click({ $script:msgResult = "OK"; $msgForm.Close() })
+        $msgForm.Controls.Add($btnOk)
+    }
+
+    [void]$msgForm.ShowDialog()
+    return $script:msgResult
+}
+
+$grpSpk = New-Object System.Windows.Forms.GroupBox
+$grpSpk.Text = "SPK İşlemleri"
+$grpSpk.ForeColor = [System.Drawing.Color]::White
+$grpSpk.Font = $fontBold
+$grpSpk.Location = New-Object System.Drawing.Point(15, 10)
+$grpSpk.Size = New-Object System.Drawing.Size(360, 205)
+$mainPanel.Controls.Add($grpSpk)
+
 $lblPid = New-Object System.Windows.Forms.Label
 $lblPid.Text = $strings.PidLabel
-$lblPid.Location = New-Object System.Drawing.Point(15, 15)
+$lblPid.Location = New-Object System.Drawing.Point(15, 25)
 $lblPid.AutoSize = $true
 $lblPid.Font = $fontBold
-$form.Controls.Add($lblPid)
+$lblPid.ForeColor = [System.Drawing.Color]::White
+$lblPid.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$grpSpk.Controls.Add($lblPid)
+
+$lnkPidHelp = New-Object System.Windows.Forms.LinkLabel
+$lnkPidHelp.Text = "[?]"
+$lnkPidHelp.Location = New-Object System.Drawing.Point(325, 25)
+$lnkPidHelp.AutoSize = $true
+$lnkPidHelp.Font = $fontNormal
+$lnkPidHelp.LinkColor = [System.Drawing.Color]::DeepSkyBlue
+$lnkPidHelp.ActiveLinkColor = [System.Drawing.Color]::White
+$lnkPidHelp.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$lnkPidHelp.LinkBehavior = [System.Windows.Forms.LinkBehavior]::NeverUnderline
+$lnkPidHelp.Add_Click({
+    $msg = if($isTr) { "1. Sunucu Yöneticisi'ni açın.`r`n2. Araçlar > Uzak Masaüstü Hizmetleri > Uzak Masaüstü Lisans Yöneticisi'ni seçin.`r`n3. Sunucunuza sağ tıklayıp Özellikler'e girin.`r`n4. Yükleme Yöntemi sekmesinde bağlantı yöntemini 'Telefon' seçin.`r`n5. Gerekli Bilgiler sekmesindeki bilgileri doldurun.`r`n6. Sunucuya sağ tıklayıp 'Sunucuyu Etkinleştir' deyin.`r`n7. Karşınıza çıkan sihirbazdaki 'Ürün Kimliği' (Product ID) kodunu kopyalayın." } else { "1. Open Server Manager.`r`n2. Tools > Remote Desktop Services > Remote Desktop Licensing Manager.`r`n3. Right click your server > Properties.`r`n4. Connection Method: Telephone.`r`n5. Fill required info.`r`n6. Right click server > Activate Server.`r`n7. Copy the 'Product ID' from the wizard." }
+    Show-CustomMsgBox $msg $script:strings.TitlePid
+})
+$grpSpk.Controls.Add($lnkPidHelp)
 
 $txtPid = New-Object System.Windows.Forms.TextBox
-$txtPid.Location = New-Object System.Drawing.Point(15, 35)
-$txtPid.Size = New-Object System.Drawing.Size(400, 25)
+$txtPid.Location = New-Object System.Drawing.Point(15, 50)
+$txtPid.Size = New-Object System.Drawing.Size(290, 25)
 $txtPid.Font = $fontNormal
-$form.Controls.Add($txtPid)
+$txtPid.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$txtPid.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$txtPid.ForeColor = [System.Drawing.Color]::White
+$txtPid.ContextMenuStrip = $ctxEditable
+$grpSpk.Controls.Add($txtPid)
+
+$styleButton = {
+    param($btn, $isPrimary)
+    $btn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btn.FlatAppearance.BorderSize = 0
+    if ($isPrimary) {
+        $btn.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80)
+        $btn.ForeColor = [System.Drawing.Color]::White
+        $btn.Add_MouseEnter({ $this.BackColor = [System.Drawing.Color]::FromArgb(95, 95, 100) })
+        $btn.Add_MouseLeave({ $this.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80) })
+    } else {
+        $btn.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 55)
+        $btn.ForeColor = [System.Drawing.Color]::White
+        $btn.Add_MouseEnter({ $this.BackColor = [System.Drawing.Color]::FromArgb(70, 70, 75) })
+        $btn.Add_MouseLeave({ $this.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 55) })
+    }
+    $btn.Cursor = [System.Windows.Forms.Cursors]::Hand
+}
+
+$btnScanPid = New-Object System.Windows.Forms.Button
+$btnScanPid.Text = [char]::ConvertFromUtf32(0x1F50D)
+$btnScanPid.Location = New-Object System.Drawing.Point(315, 49)
+$btnScanPid.Size = New-Object System.Drawing.Size(30, 27)
+$btnScanPid.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 10, [System.Drawing.FontStyle]::Regular)
+&$styleButton $btnScanPid $false
+$btnScanPid.Add_Click({
+    try {
+        $regKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64).OpenSubKey("SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+        if ($regKey) { $sysPid = $regKey.GetValue("ProductId") } else { $sysPid = $null }
+        if ($sysPid) {
+            $txtPid.Text = $sysPid
+        } else {
+            Show-CustomMsgBox $script:strings.ErrNoPidSys $script:strings.ErrorTitle
+        }
+    } catch {
+        Show-CustomMsgBox $script:strings.ErrRegAcc $script:strings.ErrorTitle
+    }
+})
+$grpSpk.Controls.Add($btnScanPid)
 
 $btnSpk = New-Object System.Windows.Forms.Button
 $btnSpk.Text = $strings.SpkBtn
-$btnSpk.Location = New-Object System.Drawing.Point(15, 65)
-$btnSpk.Size = New-Object System.Drawing.Size(400, 30)
+$btnSpk.Location = New-Object System.Drawing.Point(15, 90)
+$btnSpk.Size = New-Object System.Drawing.Size(330, 30)
 $btnSpk.Font = $fontNormal
-$form.Controls.Add($btnSpk)
+&$styleButton $btnSpk $true
+$grpSpk.Controls.Add($btnSpk)
 
 $txtSpkOutput = New-Object System.Windows.Forms.TextBox
-$txtSpkOutput.Location = New-Object System.Drawing.Point(15, 100)
-$txtSpkOutput.Size = New-Object System.Drawing.Size(400, 60)
+$txtSpkOutput.Location = New-Object System.Drawing.Point(15, 130)
+$txtSpkOutput.Size = New-Object System.Drawing.Size(290, 60)
 $txtSpkOutput.Multiline = $true
 $txtSpkOutput.ReadOnly = $true
-$txtSpkOutput.Font = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Regular)
-$form.Controls.Add($txtSpkOutput)
+$txtSpkOutput.Font = New-Object System.Drawing.Font("Consolas", 8, [System.Drawing.FontStyle]::Regular)
+$txtSpkOutput.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$txtSpkOutput.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$txtSpkOutput.ForeColor = [System.Drawing.Color]::White
+$txtSpkOutput.ContextMenuStrip = $ctxReadOnly
+$grpSpk.Controls.Add($txtSpkOutput)
 
-$lblLkpTitle = New-Object System.Windows.Forms.Label
-$lblLkpTitle.Text = $strings.LkpGroup
-$lblLkpTitle.Location = New-Object System.Drawing.Point(15, 185)
-$lblLkpTitle.AutoSize = $true
-$lblLkpTitle.Font = $fontBold
-$form.Controls.Add($lblLkpTitle)
+$btnCopySpk = New-Object System.Windows.Forms.Button
+$btnCopySpk.Text = [char]::ConvertFromUtf32(0x1F4CB)
+$btnCopySpk.Location = New-Object System.Drawing.Point(315, 145)
+$btnCopySpk.Size = New-Object System.Drawing.Size(30, 30)
+$btnCopySpk.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 10, [System.Drawing.FontStyle]::Regular)
+&$styleButton $btnCopySpk $false
+$btnCopySpk.Add_Click({
+    if (-not [string]::IsNullOrWhiteSpace($txtSpkOutput.Text)) {
+        [System.Windows.Forms.Clipboard]::SetText($txtSpkOutput.Text.Replace("SPK:`r`n", "").Trim())
+        Show-CustomMsgBox $script:strings.CopySpkSuccess $script:strings.InfoTitle
+    }
+})
+$grpSpk.Controls.Add($btnCopySpk)
+
+$grpLkp = New-Object System.Windows.Forms.GroupBox
+$grpLkp.Text = $strings.LkpGroup
+$grpLkp.ForeColor = [System.Drawing.Color]::White
+$grpLkp.Font = $fontBold
+$grpLkp.Location = New-Object System.Drawing.Point(15, 230)
+$grpLkp.Size = New-Object System.Drawing.Size(360, 195)
+$mainPanel.Controls.Add($grpLkp)
 
 $lblCount = New-Object System.Windows.Forms.Label
 $lblCount.Text = $strings.CountLabel
-$lblCount.Location = New-Object System.Drawing.Point(15, 215)
+$lblCount.Location = New-Object System.Drawing.Point(245, 25)
 $lblCount.AutoSize = $true
 $lblCount.Font = $fontNormal
-$form.Controls.Add($lblCount)
+$lblCount.ForeColor = [System.Drawing.Color]::White
+$lblCount.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$grpLkp.Controls.Add($lblCount)
+
+$lnkCountHelp = New-Object System.Windows.Forms.LinkLabel
+$lnkCountHelp.Text = "[?]"
+$lnkCountHelp.Location = New-Object System.Drawing.Point(325, 25)
+$lnkCountHelp.AutoSize = $true
+$lnkCountHelp.Font = $fontNormal
+$lnkCountHelp.LinkColor = [System.Drawing.Color]::DeepSkyBlue
+$lnkCountHelp.ActiveLinkColor = [System.Drawing.Color]::White
+$lnkCountHelp.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$lnkCountHelp.LinkBehavior = [System.Windows.Forms.LinkBehavior]::NeverUnderline
+$lnkCountHelp.Add_Click({
+    $msg = if($isTr) { "Sunucunuza eklemek istediğiniz toplam eşzamanlı kullanıcı veya cihaz lisansı sayısıdır. (Örn: 50, 100, 500)" } else { "The total number of concurrent user or device licenses you want to add to your server. (e.g. 50, 100, 500)" }
+    Show-CustomMsgBox $msg $script:strings.TitleCount
+})
+$grpLkp.Controls.Add($lnkCountHelp)
 
 $txtCount = New-Object System.Windows.Forms.TextBox
-$txtCount.Location = New-Object System.Drawing.Point(15, 235)
-$txtCount.Size = New-Object System.Drawing.Size(150, 25)
+$txtCount.Location = New-Object System.Drawing.Point(245, 50)
+$txtCount.Size = New-Object System.Drawing.Size(100, 25)
 $txtCount.Font = $fontNormal
 $txtCount.MaxLength = 4
 $txtCount.Text = "9999"
-$form.Controls.Add($txtCount)
+$txtCount.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$txtCount.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$txtCount.ForeColor = [System.Drawing.Color]::White
+$txtCount.ContextMenuStrip = $ctxEditable
+$grpLkp.Controls.Add($txtCount)
 
 $lblVer = New-Object System.Windows.Forms.Label
 $lblVer.Text = $strings.VerLabel
-$lblVer.Location = New-Object System.Drawing.Point(15, 265)
+$lblVer.Location = New-Object System.Drawing.Point(15, 25)
 $lblVer.AutoSize = $true
 $lblVer.Font = $fontNormal
-$form.Controls.Add($lblVer)
+$lblVer.ForeColor = [System.Drawing.Color]::White
+$lblVer.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$grpLkp.Controls.Add($lblVer)
 
-$cmbVer = New-Object System.Windows.Forms.ComboBox
-$cmbVer.Location = New-Object System.Drawing.Point(15, 285)
-$cmbVer.Size = New-Object System.Drawing.Size(400, 25)
-$cmbVer.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-$cmbVer.Font = $fontNormal
-$form.Controls.Add($cmbVer)
+$lnkVerHelp = New-Object System.Windows.Forms.LinkLabel
+$lnkVerHelp.Text = "[?]"
+$lnkVerHelp.Location = New-Object System.Drawing.Point(210, 25)
+$lnkVerHelp.AutoSize = $true
+$lnkVerHelp.Font = $fontNormal
+$lnkVerHelp.LinkColor = [System.Drawing.Color]::DeepSkyBlue
+$lnkVerHelp.ActiveLinkColor = [System.Drawing.Color]::White
+$lnkVerHelp.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$lnkVerHelp.LinkBehavior = [System.Windows.Forms.LinkBehavior]::NeverUnderline
+$lnkVerHelp.Add_Click({
+    $msg = if($isTr) { "Kullanmakta olduğunuz işletim sistemine uygun RDS sürümüdür.`r`n`r`nPer User: Kullanıcı bazlı (Bağımsız kişi sayısına göre)`r`nPer Device: Cihaz bazlı (Bağlanan makine sayısına göre)" } else { "The RDS version corresponding to your operating system.`r`n`r`nPer User: Based on individual users.`r`nPer Device: Based on connecting machines." }
+    Show-CustomMsgBox $msg $script:strings.TitleVer
+})
+$grpLkp.Controls.Add($lnkVerHelp)
+
+$btnCmbVer = New-Object System.Windows.Forms.Button
+$btnCmbVer.Location = New-Object System.Drawing.Point(15, 50)
+$btnCmbVer.Size = New-Object System.Drawing.Size(215, 25)
+$btnCmbVer.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnCmbVer.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(85, 85, 85)
+$btnCmbVer.Font = $fontNormal
+$btnCmbVer.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$btnCmbVer.ForeColor = [System.Drawing.Color]::White
+$btnCmbVer.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+$btnCmbVer.Text = "Windows Server 2022 Per User"
+$btnCmbVer.Tag = "030_10_2"
+$grpLkp.Controls.Add($btnCmbVer)
+
+$ctxVer = New-Object System.Windows.Forms.ContextMenuStrip
+$ctxVer.Renderer = $ctxRenderer
+$ctxVer.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$ctxVer.ForeColor = [System.Drawing.Color]::White
+$ctxVer.ShowImageMargin = $false
 
 $versions = @(
     @{ Text = "Windows 2000 Per Device"; Value = "001_5_0" }
@@ -500,24 +975,52 @@ $versions = @(
 )
 
 foreach($v in $versions) {
-    [void]$cmbVer.Items.Add($v.Text)
+    $item = $ctxVer.Items.Add($v.Text)
+    $item.Tag = $v.Value
+    $item.Add_Click({
+        param($sender, $e)
+        $btnCmbVer.Text = $sender.Text
+        $btnCmbVer.Tag = $sender.Tag
+    })
 }
-$cmbVer.SelectedIndex = 19 # Server 2022 Per User
+
+$btnCmbVer.Add_Click({
+    $ctxVer.Show($btnCmbVer, (New-Object System.Drawing.Point(0, $btnCmbVer.Height)))
+})
 
 $btnLkp = New-Object System.Windows.Forms.Button
 $btnLkp.Text = $strings.LkpBtn
-$btnLkp.Location = New-Object System.Drawing.Point(15, 325)
-$btnLkp.Size = New-Object System.Drawing.Size(400, 30)
+$btnLkp.Location = New-Object System.Drawing.Point(15, 90)
+$btnLkp.Size = New-Object System.Drawing.Size(330, 30)
 $btnLkp.Font = $fontNormal
-$form.Controls.Add($btnLkp)
+&$styleButton $btnLkp $true
+$grpLkp.Controls.Add($btnLkp)
 
 $txtLkpOutput = New-Object System.Windows.Forms.TextBox
-$txtLkpOutput.Location = New-Object System.Drawing.Point(15, 360)
-$txtLkpOutput.Size = New-Object System.Drawing.Size(400, 60)
+$txtLkpOutput.Location = New-Object System.Drawing.Point(15, 130)
+$txtLkpOutput.Size = New-Object System.Drawing.Size(290, 50)
 $txtLkpOutput.Multiline = $true
 $txtLkpOutput.ReadOnly = $true
-$txtLkpOutput.Font = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Regular)
-$form.Controls.Add($txtLkpOutput)
+$txtLkpOutput.Font = New-Object System.Drawing.Font("Consolas", 8, [System.Drawing.FontStyle]::Regular)
+$txtLkpOutput.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$txtLkpOutput.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$txtLkpOutput.ForeColor = [System.Drawing.Color]::White
+$txtLkpOutput.ContextMenuStrip = $ctxReadOnly
+$grpLkp.Controls.Add($txtLkpOutput)
+
+$btnCopyLkp = New-Object System.Windows.Forms.Button
+$btnCopyLkp.Text = [char]::ConvertFromUtf32(0x1F4CB)
+$btnCopyLkp.Location = New-Object System.Drawing.Point(315, 140)
+$btnCopyLkp.Size = New-Object System.Drawing.Size(30, 30)
+$btnCopyLkp.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 10, [System.Drawing.FontStyle]::Regular)
+&$styleButton $btnCopyLkp $false
+$btnCopyLkp.Add_Click({
+    if (-not [string]::IsNullOrWhiteSpace($txtLkpOutput.Text)) {
+        [System.Windows.Forms.Clipboard]::SetText($txtLkpOutput.Text.Replace("LKP:`r`n", "").Trim())
+        Show-CustomMsgBox $script:strings.CopyLkpSuccess $script:strings.InfoTitle
+    }
+})
+$grpLkp.Controls.Add($btnCopyLkp)
 
 $btnSpk.Add_Click({
     $inputPid = $txtPid.Text.Trim()
@@ -525,7 +1028,34 @@ $btnSpk.Add_Click({
         $txtSpkOutput.Text = $strings.ErrPidReq
         return
     }
+    # Auto-format and validate
+    $inputPid = $inputPid -replace '[\s-]', ''
+    if ($inputPid.Length -eq 20) {
+        if ($inputPid.Substring(5, 3).ToUpper() -eq "OEM") {
+            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,3), $inputPid.Substring(8,7), $inputPid.Substring(15,5)
+        } else {
+            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,5), $inputPid.Substring(10,5), $inputPid.Substring(15,5)
+        }
+        $txtPid.Text = $inputPid
+    }
+
+    $baselineRegex = "^([A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5})$|^([A-Za-z0-9]{5}-[A-Za-z0-9]{3}-[A-Za-z0-9]{7}-[A-Za-z0-9]{5})$"
+    if ($inputPid -notmatch $baselineRegex) {
+        $errMsg = if($script:isTr) { "Hata: Ge$([char]0x00E7)ersiz PID yap$([char]0x0131)s$([char]0x0131). L$([char]0x00FC)tfen standart $([char]0x00FC)r$([char]0x00FC)n anahtar$([char]0x0131) format$([char]0x0131)nda girin (Tireler dahil yakla$([char]0x015F)$([char]0x0131)k 23 karakter, 4 b$([char]0x00F6)l$([char]0x00FC)m)." } else { "Error: Invalid PID structure. Please use a standard format (4 segments separated by dashes)." }
+        $txtSpkOutput.Text = $errMsg
+        return
+    }
     $txtSpkOutput.Text = $strings.Working
+    $pattern1 = "^\d{5}-\d{5}-\d{5}-[a-zA-Z]{2}\d{3}$"
+    $pattern2 = "^\d{5}-OEM-\d{7}-\d{5}$"
+    $pattern3 = "^\d{5}-\d{3}-\d{7}-\d{5}$"
+    
+    if ($inputPid -notmatch $pattern1 -and $inputPid -notmatch $pattern2 -and $inputPid -notmatch $pattern3) {
+        $msg = if($script:isTr) { "Uyar$([char]0x0131): Girdi$([char]0x011F)iniz PID bir Windows Server $([char]0x00FC)r$([char]0x00FC)n$([char]0x00FC)ne ait g$([char]0x00F6)r$([char]0x00FC)nm$([char]0x00FC)yor. Kodlar $([char]0x00FC)retilecek ancak sisteminizde $([char]0x00E7)al$([char]0x0131)$([char]0x015F)mayabilir." } else { "Warning: The entered PID does not appear to belong to a Windows Server product. Codes will be generated but may not work on your system." }
+        $txtLogs.Text += "$msg`r`n"
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+    }
     $form.Refresh()
     
     try {
@@ -538,6 +1068,23 @@ $btnSpk.Add_Click({
 
 $btnLkp.Add_Click({
     $inputPid = $txtPid.Text.Trim()
+    # Auto-format and validate
+    $inputPid = $inputPid -replace '[\s-]', ''
+    if ($inputPid.Length -eq 20) {
+        if ($inputPid.Substring(5, 3).ToUpper() -eq "OEM") {
+            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,3), $inputPid.Substring(8,7), $inputPid.Substring(15,5)
+        } else {
+            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,5), $inputPid.Substring(10,5), $inputPid.Substring(15,5)
+        }
+        $txtPid.Text = $inputPid
+    }
+
+    $baselineRegex = "^([A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5})$|^([A-Za-z0-9]{5}-[A-Za-z0-9]{3}-[A-Za-z0-9]{7}-[A-Za-z0-9]{5})$"
+    if ($inputPid -notmatch $baselineRegex) {
+        $errMsg = if($script:isTr) { "Hata: Ge$([char]0x00E7)ersiz PID yap$([char]0x0131)s$([char]0x0131). L$([char]0x00FC)tfen standart $([char]0x00FC)r$([char]0x00FC)n anahtar$([char]0x0131) format$([char]0x0131)nda girin (Tireler dahil yakla$([char]0x015F)$([char]0x0131)k 23 karakter, 4 b$([char]0x00F6)l$([char]0x00FC)m)." } else { "Error: Invalid PID structure. Please use a standard format (4 segments separated by dashes)." }
+        $txtLkpOutput.Text = $errMsg
+        return
+    }
     $countStr = $txtCount.Text.Trim()
     
     if($inputPid -eq "" -or $countStr -eq "") {
@@ -545,21 +1092,39 @@ $btnLkp.Add_Click({
         return
     }
     
-    $selVerStr = $versions[$cmbVer.SelectedIndex].Value
+    $selVerStr = $btnCmbVer.Tag
     $parts = $selVerStr.Split('_')
     $chid = [int]$parts[0]
     $majorVer = [int]$parts[1]
     $minorVer = [int]$parts[2]
-    
-    $count = 0
-    if(-not [int]::TryParse($countStr, [ref]$count) -or $count -lt 1) {
-        $txtLkpOutput.Text = $strings.ErrFormat
+    $countStr = $txtCount.Text.Trim()
+    if($countStr -eq "") {
+        $count = 0
+    } else {
+        if (-not ($countStr -match "^\d+$")) {
+            $txtLkpOutput.Text = "Hata: Lisans Sayısı kısmına sadece rakam girin."
+            return
+        }
+        $count = [int]$countStr
+    }
+    if($count -le 0) {
+        $txtLkpOutput.Text = "Hata: Lisans Sayısı 0'dan büyük olmalıdır."
         return
     }
-    
     if ($count -gt 9999) {
         $count = 9999
         $txtCount.Text = "9999"
+    }
+
+    $pattern1 = "^\d{5}-\d{5}-\d{5}-[a-zA-Z]{2}\d{3}$"
+    $pattern2 = "^\d{5}-OEM-\d{7}-\d{5}$"
+    $pattern3 = "^\d{5}-\d{3}-\d{7}-\d{5}$"
+    
+    if ($inputPid -notmatch $pattern1 -and $inputPid -notmatch $pattern2 -and $inputPid -notmatch $pattern3) {
+        $msg = if($script:isTr) { "Uyar$([char]0x0131): Girdi$([char]0x011F)iniz PID bir Windows Server $([char]0x00FC)r$([char]0x00FC)n$([char]0x00FC)ne ait g$([char]0x00F6)r$([char]0x00FC)nm$([char]0x00FC)yor. Kodlar $([char]0x00FC)retilecek ancak sisteminizde $([char]0x00E7)al$([char]0x0131)$([char]0x015F)mayabilir." } else { "Warning: The entered PID does not appear to belong to a Windows Server product. Codes will be generated but may not work on your system." }
+        $txtLogs.Text += "$msg`r`n"
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
     }
     
     $txtLkpOutput.Text = $strings.Working
@@ -573,48 +1138,373 @@ $btnLkp.Add_Click({
     }
 })
 
+$txtLogs = New-Object System.Windows.Forms.TextBox
+$txtLogs.Location = New-Object System.Drawing.Point(15, 435)
+$txtLogs.Size = New-Object System.Drawing.Size(345, 95)
+$txtLogs.Multiline = $true
+$txtLogs.ScrollBars = [System.Windows.Forms.ScrollBars]::None
+$txtLogs.ReadOnly = $true
+$txtLogs.Font = New-Object System.Drawing.Font("Consolas", 8, [System.Drawing.FontStyle]::Regular)
+$txtLogs.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$txtLogs.BackColor = [System.Drawing.Color]::FromArgb(15, 15, 15)
+$txtLogs.ForeColor = [System.Drawing.Color]::Lime
+if($script:isTr) { $txtLogs.Text = "RDS Gen Sistem Logları...`r`n" } else { $txtLogs.Text = "RDS Gen System Logs...`r`n" }
+$mainPanel.Controls.Add($txtLogs)
+
+$scrollBg = New-Object System.Windows.Forms.Panel
+$scrollBg.Size = New-Object System.Drawing.Size(15, 95)
+$scrollBg.Location = New-Object System.Drawing.Point(360, 435)
+$scrollBg.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
+$scrollBg.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+
+$scrollThumb = New-Object System.Windows.Forms.Panel
+$scrollThumb.Size = New-Object System.Drawing.Size(13, 30)
+$scrollThumb.Location = New-Object System.Drawing.Point(0, 0)
+$scrollThumb.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80)
+$scrollThumb.Cursor = [System.Windows.Forms.Cursors]::Hand
+$scrollThumb.Add_MouseEnter({ $this.BackColor = [System.Drawing.Color]::FromArgb(95, 95, 100) })
+$scrollThumb.Add_MouseLeave({ if (-not $script:isDraggingThumb) { $this.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80) } })
+
+$script:isDraggingThumb = $false
+$script:thumbStartY = 0
+$scrollThumb.Add_MouseDown({
+    param($sender, $e)
+    $script:isDraggingThumb = $true
+    $script:thumbStartY = $e.Y
+    $sender.BackColor = [System.Drawing.Color]::FromArgb(110, 110, 115)
+})
+$scrollThumb.Add_MouseUp({
+    $script:isDraggingThumb = $false
+    $scrollThumb.BackColor = [System.Drawing.Color]::FromArgb(75, 75, 80)
+})
+
+$scrollThumb.Add_MouseMove({
+    param($sender, $e)
+    if ($script:isDraggingThumb) {
+        $newY = $sender.Top + $e.Y - $script:thumbStartY
+        if ($newY -lt 0) { $newY = 0 }
+        $maxY = $scrollBg.Height - $sender.Height - 2
+        if ($newY -gt $maxY) { $newY = $maxY }
+        $sender.Top = $newY
+        
+        $pct = $newY / $maxY
+        $totalLines = $txtLogs.Lines.Count
+        $visibleLines = 6
+        if ($totalLines -gt $visibleLines) {
+            $maxScroll = $totalLines - $visibleLines
+            $targetLine = [int][math]::Round($pct * $maxScroll)
+            
+            $EM_GETFIRSTVISIBLELINE = 0x00CE
+            $EM_LINESCROLL = 0x00B6
+            
+            $currentLine = [Win32Scroll]::SendMessage($txtLogs.Handle, $EM_GETFIRSTVISIBLELINE, [IntPtr]::Zero, [IntPtr]::Zero).ToInt32()
+            $delta = $targetLine - $currentLine
+            if ($delta -ne 0) {
+                [Win32Scroll]::SendMessage($txtLogs.Handle, $EM_LINESCROLL, [IntPtr]::Zero, [IntPtr]$delta) | Out-Null
+            }
+        }
+    }
+})
+
+$txtLogs.Add_MouseWheel({
+    param($sender, $e)
+    $totalLines = $txtLogs.Lines.Count
+    $visibleLines = 6
+    if ($totalLines -gt $visibleLines) {
+        $EM_GETFIRSTVISIBLELINE = 0x00CE
+        $currentLine = [Win32Scroll]::SendMessage($txtLogs.Handle, $EM_GETFIRSTVISIBLELINE, [IntPtr]::Zero, [IntPtr]::Zero).ToInt32()
+        
+        $linesToScroll = -($e.Delta / 120) * 3
+        $newLine = $currentLine + $linesToScroll
+        if ($newLine -lt 0) { $newLine = 0 }
+        $maxScroll = $totalLines - $visibleLines
+        if ($newLine -gt $maxScroll) { $newLine = $maxScroll }
+        
+        $delta = $newLine - $currentLine
+        if ($delta -ne 0) {
+            $EM_LINESCROLL = 0x00B6
+            [Win32Scroll]::SendMessage($txtLogs.Handle, $EM_LINESCROLL, [IntPtr]::Zero, [IntPtr]$delta) | Out-Null
+            
+            $pct = $newLine / $maxScroll
+            $maxY = $scrollBg.Height - $scrollThumb.Height - 2
+            $scrollThumb.Top = [math]::Round($pct * $maxY)
+        }
+    }
+})
+
+$scrollBg.Controls.Add($scrollThumb)
+$mainPanel.Controls.Add($scrollBg)
+
+$btnSave = New-Object System.Windows.Forms.Button
+if($isTr) { $btnSave.Text = "Kaydet" } else { $btnSave.Text = "Save" }
+$btnSave.Location = New-Object System.Drawing.Point(15, 540)
+$btnSave.Size = New-Object System.Drawing.Size(90, 30)
+$btnSave.Font = $fontNormal
+&$styleButton $btnSave $false
+$btnSave.Add_Click({
+    $spkText = $txtSpkOutput.Text.Replace("SPK:`r`n", "").Trim()
+    $lkpText = $txtLkpOutput.Text.Replace("LKP:`r`n", "").Trim()
+    $pidText = $txtPid.Text.Trim()
+    $countText = $txtCount.Text.Trim()
+    $verText = $btnCmbVer.Text
+
+    if ([string]::IsNullOrWhiteSpace($spkText) -and [string]::IsNullOrWhiteSpace($lkpText)) {
+        Show-CustomMsgBox $script:strings.ErrNoSave $script:strings.WarningTitle
+        return
+    }
+
+    $baseDir = $PSScriptRoot
+    if ([string]::IsNullOrWhiteSpace($baseDir)) { $baseDir = [Environment]::GetFolderPath("Desktop") }
+    $fileName = if ($script:isTr) { "RDS_Lisans_Kayitlari.txt" } else { "RDS_License_Records.txt" }
+    $filePath = Join-Path -Path $baseDir -ChildPath $fileName
+    $dateStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    
+    if ($script:isTr) {
+        $report = "----------------------------------------`r`n" +
+                  "Tarih: $dateStr`r`n" +
+                  "Product ID: $pidText`r`n" +
+                  "S$([char]0x00FC)r$([char]0x00FC)m: $verText`r`n" +
+                  "Lisans Say$([char]0x0131)s$([char]0x0131): $countText`r`n`r`n" +
+                  "$([char]0x00DC)retilen SPK:`r`n$spkText`r`n`r`n" +
+                  "$([char]0x00DC)retilen LKP:`r`n$lkpText`r`n" +
+                  "----------------------------------------"
+    } else {
+        $report = "----------------------------------------`r`n" +
+                  "Date: $dateStr`r`n" +
+                  "Product ID: $pidText`r`n" +
+                  "Version: $verText`r`n" +
+                  "License Count: $countText`r`n`r`n" +
+                  "Generated SPK:`r`n$spkText`r`n`r`n" +
+                  "Generated LKP:`r`n$lkpText`r`n" +
+                  "----------------------------------------"
+    }
+    
+    try {
+        Add-Content -Path $filePath -Value $report -Encoding UTF8
+        Show-CustomMsgBox "$($script:strings.SaveSuccess)$filePath" $script:strings.SuccessTitle
+    } catch {
+        Show-CustomMsgBox "$($script:strings.SaveError)$($_.Exception.Message)" $script:strings.ErrorTitle
+    }
+})
+$mainPanel.Controls.Add($btnSave)
+
+$btnReset = New-Object System.Windows.Forms.Button
+$btnReset.Text = [char]::ConvertFromUtf32(0x21BB)
+$btnReset.Location = New-Object System.Drawing.Point(115, 540)
+$btnReset.Size = New-Object System.Drawing.Size(30, 30)
+$btnReset.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 12, [System.Drawing.FontStyle]::Bold)
+$btnReset.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnReset.FlatAppearance.BorderSize = 1
+$btnReset.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60, 60, 65)
+$btnReset.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$btnReset.ForeColor = [System.Drawing.Color]::White
+$btnReset.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnReset.Add_MouseEnter({ $btnReset.BackColor = [System.Drawing.Color]::FromArgb(200, 50, 50) })
+$btnReset.Add_MouseLeave({ $btnReset.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48) })
+$btnReset.Add_Click({
+    $txtPid.Text = ""
+    $txtCount.Text = "1"
+    if($isTr) { $btnCmbVer.Text = "  Windows Server 2022 / 2025" } else { $btnCmbVer.Text = "  Windows Server 2022 / 2025" }
+    $btnCmbVer.Tag = 0
+    $txtSpkOutput.Text = ""
+    $txtLkpOutput.Text = ""
+    $txtSpkOutput.ForeColor = [System.Drawing.Color]::White
+    $txtLkpOutput.ForeColor = [System.Drawing.Color]::White
+    if($script:isTr) { $txtLogs.Text = "RDS Gen Sistem Logları...`r`n" } else { $txtLogs.Text = "RDS Gen System Logs...`r`n" }
+    $scrollThumb.Top = 0
+})
+$mainPanel.Controls.Add($btnReset)
+
+$btnSettings = New-Object System.Windows.Forms.Button
+$btnSettings.Text = [char]::ConvertFromUtf32(0x2699)
+$btnSettings.Location = New-Object System.Drawing.Point(155, 540)
+$btnSettings.Size = New-Object System.Drawing.Size(30, 30)
+$btnSettings.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 12, [System.Drawing.FontStyle]::Regular)
+$btnSettings.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnSettings.FlatAppearance.BorderSize = 1
+$btnSettings.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60, 60, 65)
+$btnSettings.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$btnSettings.ForeColor = [System.Drawing.Color]::White
+$btnSettings.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnSettings.Add_MouseEnter({ $btnSettings.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 70) })
+$btnSettings.Add_MouseLeave({ $btnSettings.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48) })
+
+$ctxSettings = New-Object System.Windows.Forms.ContextMenuStrip
+$ctxSettings.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+$ctxSettings.ForeColor = [System.Drawing.Color]::White
+$ctxSettings.ShowImageMargin = $false
+$iPhase1 = $ctxSettings.Items.Add("RDS Sıfırla (Adım 1)")
+$iPhase2 = $ctxSettings.Items.Add("RDS Sıfırla (Adım 2)")
+
+$iPhase1.Add_Click({
+    $res = Show-CustomMsgBox $script:strings.Phase1Msg $script:strings.WarningTitle "YesNo"
+    if ($res -eq "Yes") {
+        if($script:isTr) { $txtLogs.Text += "Adım 1 başlatıldı...`r`nTermServLicensing servisi durduruluyor...`r`n" } else { $txtLogs.Text += "Phase 1 started...`r`nStopping TermServLicensing service...`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        Stop-Service TermServLicensing -Force -ErrorAction SilentlyContinue
+        taskkill /F /FI "SERVICES eq TermServLicensing" 2>$null
+        Start-Sleep -Seconds 2
+        
+        if($script:isTr) { $txtLogs.Text += "Kalıntılar temizleniyor...`r`n" } else { $txtLogs.Text += "Cleaning up leftovers...`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        Remove-Item "C:\Windows\System32\lserver" -Recurse -Force -ErrorAction SilentlyContinue
+        reg delete "HKLM\SOFTWARE\Microsoft\TermServLicensing" /f 2>$null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Services\TermServLicensing" /f 2>$null
+        
+        if($script:isTr) { $txtLogs.Text += "RDS Lisanslama rolü kaldırılıyor...`r`n" } else { $txtLogs.Text += "Uninstalling RDS Licensing role...`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        Uninstall-WindowsFeature -Name RDS-Licensing
+        
+        if($script:isTr) { $txtLogs.Text += "Kaldırma tamamlandı!`r`n" } else { $txtLogs.Text += "Uninstall completed!`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        
+        $rstMsg = if($script:isTr) { "İşlemler tamamlandı. Değişikliklerin etkili olması için sunucuyu şimdi yeniden başlatmak ister misiniz?" } else { "Operations completed. Do you want to restart the server now for changes to take effect?" }
+        $rstRes = Show-CustomMsgBox $rstMsg $script:strings.InfoTitle "YesNo"
+        if ($rstRes -eq "Yes") {
+            Restart-Computer -Force
+        }
+    }
+})
+
+$iPhase2.Add_Click({
+    $res = Show-CustomMsgBox $script:strings.Phase2Msg $script:strings.InfoTitle "YesNo"
+    if ($res -eq "Yes") {
+        if($script:isTr) { $txtLogs.Text += "Adım 2 başlatıldı...`r`nRDS Lisanslama rolü kuruluyor...`r`n" } else { $txtLogs.Text += "Phase 2 started...`r`nInstalling RDS Licensing role...`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        Install-WindowsFeature -Name RDS-Licensing -IncludeManagementTools
+        
+        if($script:isTr) { $txtLogs.Text += "Servis başlatılıyor...`r`n" } else { $txtLogs.Text += "Starting service...`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Service TermServLicensing -ErrorAction SilentlyContinue
+        
+        if($script:isTr) { $txtLogs.Text += "İşlem başarıyla tamamlandı!`r`n" } else { $txtLogs.Text += "Process completed successfully!`r`n" }
+        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
+        [System.Windows.Forms.Application]::DoEvents()
+        Show-CustomMsgBox $script:strings.Phase2Success $script:strings.SuccessTitle
+    }
+})
+
+$btnSettings.Add_Click({
+    $ctxSettings.Show($btnSettings, (New-Object System.Drawing.Point(0, -$ctxSettings.Height)))
+})
+$mainPanel.Controls.Add($btnSettings)
+
 $btnAbout = New-Object System.Windows.Forms.Button
 $btnAbout.Text = $strings.AboutBtn
-$btnAbout.Location = New-Object System.Drawing.Point(15, 450)
-$btnAbout.Size = New-Object System.Drawing.Size(100, 30)
+$btnAbout.Location = New-Object System.Drawing.Point(195, 540)
+$btnAbout.Size = New-Object System.Drawing.Size(85, 30)
 $btnAbout.Font = $fontNormal
+&$styleButton $btnAbout $false
 $btnAbout.Add_Click({
     $aboutForm = New-Object System.Windows.Forms.Form
     $aboutForm.Text = $strings.AboutTitle
-    $aboutForm.Size = New-Object System.Drawing.Size(400, 220)
+    $aboutForm.Size = New-Object System.Drawing.Size(390, 250)
     $aboutForm.StartPosition = "CenterParent"
-    $aboutForm.FormBorderStyle = "FixedDialog"
-    $aboutForm.MaximizeBox = $false
-    $aboutForm.MinimizeBox = $false
+    $aboutForm.FormBorderStyle = "None"
+    $aboutForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $aboutForm.Opacity = 0
+    $aboutForm.KeyPreview = $true
+    $aboutForm.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape -or $e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            $aboutForm.Close()
+        }
+    })
+    $aboutForm.Add_Load({
+        $script:fadeTimerAbt = New-Object System.Windows.Forms.Timer
+        $script:fadeTimerAbt.Interval = 10
+        $script:fadeTimerAbt.Add_Tick({
+            $aboutForm.Opacity += 0.1
+            if ($aboutForm.Opacity -ge 1) {
+                $script:fadeTimerAbt.Stop()
+                $script:fadeTimerAbt.Dispose()
+            }
+        })
+        $script:fadeTimerAbt.Start()
+    })
+
+    $aboutForm.Add_Paint({
+        param($sender, $e)
+        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::Gray, 1)
+        $e.Graphics.DrawRectangle($pen, 0, 0, ($aboutForm.Width - 1), ($aboutForm.Height - 1))
+    })
+
+    $aboutTitleBar = New-Object System.Windows.Forms.Panel
+    $aboutTitleBar.Height = 30
+    $aboutTitleBar.Dock = [System.Windows.Forms.DockStyle]::Top
+    $aboutTitleBar.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+
+    $aboutTitleLbl = New-Object System.Windows.Forms.Label
+    $aboutTitleLbl.Text = $strings.AboutTitle
+    $aboutTitleLbl.Location = New-Object System.Drawing.Point(10, 5)
+    $aboutTitleLbl.AutoSize = $true
+    $aboutTitleLbl.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $aboutTitleLbl.ForeColor = [System.Drawing.Color]::White
+    $aboutTitleLbl.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
+    $aboutTitleBar.Controls.Add($aboutTitleLbl)
+
+    $aboutTitleBar.Add_MouseDown($dragAction)
+    $aboutTitleBar.Add_MouseMove($moveAction)
+    $aboutTitleBar.Add_MouseUp($upAction)
+    $aboutTitleBar.Add_Click({ $aboutForm.Close() })
+    $aboutTitleLbl.Add_MouseDown($dragAction)
+    $aboutTitleLbl.Add_MouseMove($moveAction)
+    $aboutTitleLbl.Add_MouseUp($upAction)
+    $aboutTitleLbl.Add_Click({ $aboutForm.Close() })
+
+    $aboutForm.Controls.Add($aboutTitleBar)
+
+    $aboutMainPanel = New-Object System.Windows.Forms.Panel
+    $aboutMainPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $aboutMainPanel.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $aboutForm.Controls.Add($aboutMainPanel)
+    $aboutMainPanel.BringToFront()
 
     $lblLine1 = New-Object System.Windows.Forms.Label
-    $lblLine1.Text = "Coded by Abdullah ERTÜRK"
+    $lblLine1.Text = "Coded by Abdullah ERTÃœRK"
     $lblLine1.Location = New-Object System.Drawing.Point(20, 20)
     $lblLine1.AutoSize = $true
     $lblLine1.Font = $fontBold
-    $aboutForm.Controls.Add($lblLine1)
+    $lblLine1.ForeColor = [System.Drawing.Color]::White
+    $lblLine1.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $lblLine1.Add_Click({ $aboutForm.Close() })
+    $aboutMainPanel.Controls.Add($lblLine1)
+    $aboutMainPanel.Add_Click({ $aboutForm.Close() })
 
     $lnkGitHub = New-Object System.Windows.Forms.LinkLabel
     $lnkGitHub.Text = "github.com/abdullah-erturk"
     $lnkGitHub.Location = New-Object System.Drawing.Point(20, 50)
     $lnkGitHub.AutoSize = $true
     $lnkGitHub.Font = $fontNormal
+    $lnkGitHub.LinkColor = [System.Drawing.Color]::FromArgb(78, 179, 211)
+    $lnkGitHub.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $lnkGitHub.Add_LinkClicked({ [System.Diagnostics.Process]::Start("https://github.com/abdullah-erturk") | Out-Null })
-    $aboutForm.Controls.Add($lnkGitHub)
+    $aboutMainPanel.Controls.Add($lnkGitHub)
 
     $lnkWeb = New-Object System.Windows.Forms.LinkLabel
     $lnkWeb.Text = "erturk-dev.netlify.app"
     $lnkWeb.Location = New-Object System.Drawing.Point(20, 75)
     $lnkWeb.AutoSize = $true
     $lnkWeb.Font = $fontNormal
+    $lnkWeb.LinkColor = [System.Drawing.Color]::FromArgb(78, 179, 211)
+    $lnkWeb.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $lnkWeb.Add_LinkClicked({ [System.Diagnostics.Process]::Start("https://erturk-dev.netlify.app") | Out-Null })
-    $aboutForm.Controls.Add($lnkWeb)
+    $aboutMainPanel.Controls.Add($lnkWeb)
 
     $lnkThanks = New-Object System.Windows.Forms.LinkLabel
-    $lnkThanks.Text = if($isTr) { "Teşekkürler WitherOrNot ve Lyssa (thecatontheceiling)" } else { "Thanks to WitherOrNot and Lyssa (thecatontheceiling)" }
+    if($isTr) { $lnkThanks.Text = "Teşekkürler WitherOrNot, Lyssa (thecatontheceiling) ve Bensuslu11" } else { $lnkThanks.Text = "Thanks to WitherOrNot, Lyssa (thecatontheceiling) and Bensuslu11" }
     $lnkThanks.Location = New-Object System.Drawing.Point(20, 115)
     $lnkThanks.AutoSize = $true
     $lnkThanks.Font = $fontNormal
+    $lnkThanks.LinkColor = [System.Drawing.Color]::FromArgb(78, 179, 211)
+    $lnkThanks.ForeColor = [System.Drawing.Color]::White
+    $lnkThanks.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $lnkThanks.LinkArea = New-Object System.Windows.Forms.LinkArea(0, 0)
     
     $witherStart = $lnkThanks.Text.IndexOf("WitherOrNot")
@@ -622,25 +1512,74 @@ $btnAbout.Add_Click({
     
     $lyssaStart = $lnkThanks.Text.IndexOf("Lyssa")
     [void]$lnkThanks.Links.Add($lyssaStart, 26, "https://github.com/thecatontheceiling")
+
+    $bensuStart = $lnkThanks.Text.IndexOf("Bensuslu11")
+    [void]$lnkThanks.Links.Add($bensuStart, 10, "https://github.com/Bensuslu11")
     
     $lnkThanks.Add_LinkClicked({
         param($sender, $e)
         [System.Diagnostics.Process]::Start($e.Link.LinkData) | Out-Null
     })
-    $aboutForm.Controls.Add($lnkThanks)
+    $aboutMainPanel.Controls.Add($lnkThanks)
+
+    $ipAddr = "Bilinmiyor"
+    try {
+        $ips = [System.Net.Dns]::GetHostAddresses($env:COMPUTERNAME) | Where-Object { $_.AddressFamily -eq 'InterNetwork' }
+        if ($ips) { $ipAddr = $ips[0].ToString() }
+    } catch {}
+
+    $lblHost = New-Object System.Windows.Forms.Label
+    $lblHost.Text = "Host: $env:COMPUTERNAME  |  IP: $ipAddr"
+    $lblHost.Location = New-Object System.Drawing.Point(20, 150)
+    $lblHost.AutoSize = $true
+    $lblHost.Font = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Regular)
+    $lblHost.ForeColor = [System.Drawing.Color]::DarkGray
+    $lblHost.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $lblHost.Add_Click({ $aboutForm.Close() })
+    $aboutMainPanel.Controls.Add($lblHost)
+
+    $btnAboutClose = New-Object System.Windows.Forms.Button
+    $btnAboutClose.Text = "Kapat"
+    $btnAboutClose.Location = New-Object System.Drawing.Point(275, 175)
+    $btnAboutClose.Size = New-Object System.Drawing.Size(100, 30)
+    $btnAboutClose.Font = $fontNormal
+    &$styleButton $btnAboutClose $false
+    $btnAboutClose.Add_Click({ $aboutForm.Close() })
+    $aboutMainPanel.Controls.Add($btnAboutClose)
 
     $aboutForm.ShowDialog() | Out-Null
 })
-$form.Controls.Add($btnAbout)
+$mainPanel.Controls.Add($btnAbout)
 
 $btnHelp = New-Object System.Windows.Forms.Button
 $btnHelp.Text = $strings.HelpBtn
-$btnHelp.Location = New-Object System.Drawing.Point(125, 450)
-$btnHelp.Size = New-Object System.Drawing.Size(100, 30)
+$btnHelp.Location = New-Object System.Drawing.Point(290, 540)
+$btnHelp.Size = New-Object System.Drawing.Size(85, 30)
 $btnHelp.Font = $fontNormal
+&$styleButton $btnHelp $false
 $btnHelp.Add_Click({
-    [System.Windows.Forms.MessageBox]::Show($strings.HelpText, $strings.HelpTitle, [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    Show-CustomMsgBox $strings.HelpText $strings.HelpTitle
 })
-$form.Controls.Add($btnHelp)
+$mainPanel.Controls.Add($btnHelp)
+
+$form.KeyPreview = $true
+$form.Add_KeyDown({
+    param($sender, $e)
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
+        $form.Close()
+    }
+    elseif ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::S) {
+        $btnSave.PerformClick()
+    }
+    elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        if ($txtPid.Focused) {
+            $btnSpk.PerformClick()
+            $e.SuppressKeyPress = $true
+        } elseif ($txtCount.Focused) {
+            $btnLkp.PerformClick()
+            $e.SuppressKeyPress = $true
+        }
+    }
+})
 
 $form.ShowDialog() | Out-Null
