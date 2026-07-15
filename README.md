@@ -9,6 +9,18 @@
 ## Download Link:
 
 [![Stable?](https://img.shields.io/badge/Release-v1.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
+
+<br>
+<details>
+<summary><strong>📋 Değişiklikler / Changelog</strong></summary>
+
+| Version | Changelog |
+| :---: | :--- |
+| **v1** | 🇹🇷 İlk Sürüm <hr> 🇬🇧 First Release |
+| **v2** | 🇹🇷 Karanlık tema arayüzü, uygulama içi dil seçeneği (EN/TR), lisans sıfırlama aracı entegrasyonu ve çıktı kutusu düzeltmeleri eklendi. <hr> 🇬🇧 Dark Theme GUI, in-app language toggle (EN/TR), integrated license reset tool, and output box fixes added. |
+
+</details>
+
 </div>
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
@@ -32,7 +44,7 @@ Kriptografi kodlarının C# diline uyarlanması ve ilk web arayüzünün oluştu
 Bu çalışma tamamen **eğitim ve araştırma amacıyla** hazırlanmıştır. Lütfen bu aracı kullanırken Microsoft'un mevcut lisans sözleşmelerine ve kullanım şartlarına (EULA) uyunuz. Geliştiriciler, bu aracın amacı dışında kullanılmasından doğacak herhangi bir yasal sorumluluğu kabul etmez.
 
 ## Ekstra: RDS Lisanslamasını Tamamen Sıfırlama
-Eğer mevcut RDS lisansını tamamen kaldırmak, eski lisansların tüm izlerini temizlemek ve sıfırdan yeniden kurmak isterseniz, Yönetici olarak (Administrator) PowerShell'i açıp aşağıdaki adımları uygulayabilirsiniz:
+**💡 Not:** Bu işlemlerin tamamı uygulamanın yeni sürümüyle birlikte doğrudan arayüze entegre edilmiştir. Ancak işlemleri manuel olarak yapmak isterseniz, Yönetici olarak (Administrator) PowerShell'i açıp aşağıdaki adımları uygulayabilirsiniz:
 
 ```powershell
 # 1. Servisi durdur
@@ -65,6 +77,7 @@ Katkılarından ve muazzam çalışmalarından dolayı aşağıdaki kişilere ö
 * **[WitherOrNot](https://github.com/WitherOrNot)** - Temel kriptografi araştırması ve orijinal kod katkıları.
 * **[Lyssa (thecatontheceiling)](https://github.com/thecatontheceiling)** - Kodun C# uyarlaması ve web tabanlı temel proje.
 * **[asdcorp](https://github.com/asdcorp)** - Orijinal projenin temellerine olan katkıları.
+* **[Bensuslu11](https://github.com/Bensuslu11)** - Arayüz (GUI) güncellemesindeki harika katkıları.
 
 *Kullanıcı arayüzü ve PowerShell entegrasyonu [Abdullah ERTÜRK](https://github.com/abdullah-erturk) tarafından kodlanmıştır.*
 </details>
@@ -87,7 +100,7 @@ The C# cryptography port was originally created by **[Lyssa (thecatontheceiling)
 This project is strictly for **educational and research purposes**. Please adhere to Microsoft's current licensing agreements and terms of use (EULA) when using this tool. The developers assume no legal responsibility for any misuse of this tool.
 
 ## Extra: Completely Resetting RDS Licensing
-If you wish to completely remove the existing RDS Licensing role, clear all traces of your old licenses, and reinstall it from scratch, you can run the following PowerShell commands as Administrator:
+**💡 Note:** All of these steps are now integrated directly into the application's GUI in the latest release. However, if you wish to perform them manually, you can run the following PowerShell commands as Administrator:
 
 ```powershell
 # 1. Stop the service
@@ -120,6 +133,7 @@ A special thanks to the following individuals for their amazing work and contrib
 * **[WitherOrNot](https://github.com/WitherOrNot)** - Foundational research and original code contributions.
 * **[Lyssa (thecatontheceiling)](https://github.com/thecatontheceiling)** - Original C# port and the base web implementation.
 * **[asdcorp](https://github.com/asdcorp)** - Contributions to the foundation of the original project.
+* **[Bensuslu11](https://github.com/Bensuslu11)** - Awesome contributions to the user interface (GUI) updates.
 
 *GUI and PowerShell integration coded by [Abdullah ERTÜRK](https://github.com/abdullah-erturk).*
 </details>
