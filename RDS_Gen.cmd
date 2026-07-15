@@ -396,11 +396,11 @@ function Update-Language {
         Title = if($script:isTr) { "RDS Gen - made by Abdullah ERTÜRK" } else { "RDS Gen - made by Abdullah ERTÜRK" }
         PidLabel = if($script:isTr) { "Product ID (PID):" } else { "Product ID (PID):" }
         PidPlaceholder = if($script:isTr) { "Örn: 00490-92005-99454-AT527" } else { "e.g., 00490-92005-99454-AT527" }
-        SpkBtn = if($script:isTr) { "Lisans Sunucu Kimliği (SPK) Oluştur" } else { "Create License Server ID (SPK)" }
+        SpkBtn = if($script:isTr) { "Lisans Sunucu Kimliği (SPK) Üret" } else { "Generate License Server ID (SPK)" }
         LkpGroup = if($script:isTr) { "Lisans Anahtar Paketi (LKP)" } else { "License Key Pack (LKP)" }
         CountLabel = if($script:isTr) { "Lisans Sayısı:" } else { "License Count:" }
         VerLabel = if($script:isTr) { "Lisans Sürümü ve Tipi:" } else { "License Version and Type:" }
-        LkpBtn = if($script:isTr) { "Lisans Anahtar Paketi (LKP) Oluştur" } else { "Create License Key Pack (LKP)" }
+        LkpBtn = if($script:isTr) { "Lisans Anahtar Paketi (LKP) Üret" } else { "Generate License Key Pack (LKP)" }
         OutputLabel = if($script:isTr) { "Çıktı:" } else { "Output:" }
         Working = if($script:isTr) { "Üretiliyor, lütfen bekleyin..." } else { "Working, please wait..." }
         ErrPidReq = if($script:isTr) { "Hata: Product ID (PID) gerekli." } else { "Error: Product ID (PID) is required." }
