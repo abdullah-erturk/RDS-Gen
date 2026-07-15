@@ -456,8 +456,8 @@ function Update-Language {
     if ($btnLang) {
         if($script:isTr) { $btnLang.Text = "EN" } else { $btnLang.Text = "TR" }
     }
-    if ($iPhase1) { $iPhase1.Text = $script:strings.Phase1 }
-    if ($iPhase2) { $iPhase2.Text = $script:strings.Phase2 }
+    if ($script:iPhase1) { $script:iPhase1.Text = $script:strings.Phase1 }
+    if ($script:iPhase2) { $script:iPhase2.Text = $script:strings.Phase2 }
     if ($iCopy) { $iCopy.Text = $script:strings.CtxCopy }
     if ($iPaste) { $iPaste.Text = $script:strings.CtxPaste }
     if ($iSelect) { $iSelect.Text = $script:strings.CtxSelectAll }
@@ -813,12 +813,25 @@ $btnScanPid.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 10, [System
 &$styleButton $btnScanPid $false
 $btnScanPid.Add_Click({
     try {
-        $regKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64).OpenSubKey("SOFTWARE\Microsoft\Windows NT\CurrentVersion")
-        if ($regKey) { $sysPid = $regKey.GetValue("ProductId") } else { $sysPid = $null }
-        if ($sysPid) {
-            $txtPid.Text = $sysPid
+        $rdsPid = $null
+        try {
+            $wmiTS = Get-CimInstance -Class Win32_TSLicenseServer -ErrorAction SilentlyContinue
+            if ($wmiTS -and $wmiTS.ProductId) {
+                $rdsPid = $wmiTS.ProductId
+            }
+        } catch {}
+
+        if ($rdsPid) {
+            $txtPid.Text = $rdsPid
         } else {
-            Show-CustomMsgBox $script:strings.ErrNoPidSys $script:strings.ErrorTitle
+            $regKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64).OpenSubKey("SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+            if ($regKey) { $sysPid = $regKey.GetValue("ProductId") } else { $sysPid = $null }
+            
+            if ($sysPid) {
+                $txtPid.Text = $sysPid
+            } else {
+                Show-CustomMsgBox $script:strings.ErrNoPidSys $script:strings.ErrorTitle
+            }
         }
     } catch {
         Show-CustomMsgBox $script:strings.ErrRegAcc $script:strings.ErrorTitle
@@ -1333,10 +1346,10 @@ $ctxSettings = New-Object System.Windows.Forms.ContextMenuStrip
 $ctxSettings.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
 $ctxSettings.ForeColor = [System.Drawing.Color]::White
 $ctxSettings.ShowImageMargin = $false
-$iPhase1 = $ctxSettings.Items.Add("RDS Sıfırla (Adım 1)")
-$iPhase2 = $ctxSettings.Items.Add("RDS Sıfırla (Adım 2)")
+$script:iPhase1 = $ctxSettings.Items.Add($script:strings.Phase1)
+$script:iPhase2 = $ctxSettings.Items.Add($script:strings.Phase2)
 
-$iPhase1.Add_Click({
+$script:iPhase1.Add_Click({
     $isServer = (Get-CimInstance Win32_OperatingSystem).ProductType -ne 1
     if (-not $isServer) {
         $warnMsg = if($script:isTr) { "Bu işlem sadece Windows Server sürümlerinde desteklenmektedir!`r`nMevcut işletim sisteminiz bir Server sürümü değil." } else { "This operation is only supported on Windows Server editions!`r`nYour current OS is not a Server edition." }
@@ -1345,38 +1358,43 @@ $iPhase1.Add_Click({
     }
     $res = Show-CustomMsgBox $script:strings.Phase1Msg $script:strings.WarningTitle "YesNo"
     if ($res -eq "Yes") {
-        if($script:isTr) { $txtLogs.Text += "Adım 1 başlatıldı...`r`nTermServLicensing servisi durduruluyor...`r`n" } else { $txtLogs.Text += "Phase 1 started...`r`nStopping TermServLicensing service...`r`n" }
-        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
-        [System.Windows.Forms.Application]::DoEvents()
-        Stop-Service TermServLicensing -Force -ErrorAction SilentlyContinue
-        taskkill /F /FI "SERVICES eq TermServLicensing" 2>$null
-        Start-Sleep -Seconds 2
-        
-        if($script:isTr) { $txtLogs.Text += "Kalıntılar temizleniyor...`r`n" } else { $txtLogs.Text += "Cleaning up leftovers...`r`n" }
-        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
-        [System.Windows.Forms.Application]::DoEvents()
-        Remove-Item "C:\Windows\System32\lserver" -Recurse -Force -ErrorAction SilentlyContinue
-        reg delete "HKLM\SOFTWARE\Microsoft\TermServLicensing" /f 2>$null
-        reg delete "HKLM\SYSTEM\CurrentControlSet\Services\TermServLicensing" /f 2>$null
-        
-        if($script:isTr) { $txtLogs.Text += "RDS Lisanslama rolü kaldırılıyor, lütfen bekleyin...`r`n" } else { $txtLogs.Text += "Uninstalling RDS Licensing role, please wait...`r`n" }
-        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
-        [System.Windows.Forms.Application]::DoEvents()
-        Uninstall-WindowsFeature -Name RDS-Licensing
-        
-        if($script:isTr) { $txtLogs.Text += "Kaldırma tamamlandı!`r`n" } else { $txtLogs.Text += "Uninstall completed!`r`n" }
+        if($script:isTr) { $txtLogs.Text += "Adım 1 harici konsola aktarıldı. Lütfen işlemleri açılan konsol ekranından takip edin.`r`n" } else { $txtLogs.Text += "Phase 1 sent to external console. Please follow the process from the opened console screen.`r`n" }
         $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
         [System.Windows.Forms.Application]::DoEvents()
         
-        $rstMsg = if($script:isTr) { "İşlemler tamamlandı. Değişikliklerin etkili olması için sunucuyu şimdi yeniden başlatmak ister misiniz?" } else { "Operations completed. Do you want to restart the server now for changes to take effect?" }
-        $rstRes = Show-CustomMsgBox $rstMsg $script:strings.InfoTitle "YesNo"
-        if ($rstRes -eq "Yes") {
-            Restart-Computer -Force
-        }
+        $tmpScript = "$env:TEMP\rds_uninstall.ps1"
+        $scriptContent = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+`$host.UI.RawUI.WindowTitle = if(`$$($script:isTr)) { 'RDS Kaldirma (Adim 1)' } else { 'RDS Uninstall (Phase 1)' }
+if(`$$($script:isTr)) { Write-Host "`n[Adım 1] TermServLicensing servisi durduruluyor..." -ForegroundColor Cyan } else { Write-Host "`n[Phase 1] Stopping TermServLicensing service..." -ForegroundColor Cyan }
+Stop-Service TermServLicensing -Force
+taskkill /F /FI `"SERVICES eq TermServLicensing`" 2>`$null
+Start-Sleep -Seconds 2
+
+if(`$$($script:isTr)) { Write-Host "`n[Adım 1] Kalıntılar temizleniyor..." -ForegroundColor Cyan } else { Write-Host "`n[Phase 1] Cleaning up leftovers..." -ForegroundColor Cyan }
+Remove-Item `"C:\Windows\System32\lserver`" -Recurse -Force
+reg delete `"HKLM\SOFTWARE\Microsoft\TermServLicensing`" /f 2>`$null
+reg delete `"HKLM\SYSTEM\CurrentControlSet\Services\TermServLicensing`" /f 2>`$null
+
+if(`$$($script:isTr)) { Write-Host "`n[Adım 1] RDS Lisanslama rolü kaldırılıyor. Lütfen bekleyin (bu işlem biraz sürebilir)..." -ForegroundColor Cyan } else { Write-Host "`n[Phase 1] Uninstalling RDS Licensing role. Please wait (this might take a while)..." -ForegroundColor Cyan }
+`$ErrorActionPreference = 'Continue'
+Uninstall-WindowsFeature -Name RDS-Licensing
+
+Write-Host "`n-----------------------------------------------------" -ForegroundColor Yellow
+if(`$$($script:isTr)) { Write-Host "İşlemler başarıyla tamamlandı!" -ForegroundColor Green } else { Write-Host "Operations completed successfully!" -ForegroundColor Green }
+if(`$$($script:isTr)) { Write-Host "Değişikliklerin etkili olması için sunucuyu YENİDEN BAŞLATIN." -ForegroundColor Red } else { Write-Host "RESTART the server for changes to take effect." -ForegroundColor Red }
+Write-Host "-----------------------------------------------------" -ForegroundColor Yellow
+
+if(`$$($script:isTr)) { Write-Host "`nPencereyi kapatmak için ENTER tuşuna basın..." -ForegroundColor Magenta } else { Write-Host "`nPress ENTER to close this window..." -ForegroundColor Magenta }
+Read-Host
+Remove-Item -Path "`$PSCommandPath" -Force
+"@
+        [System.IO.File]::WriteAllText($tmpScript, $scriptContent, [System.Text.Encoding]::UTF8)
+        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tmpScript`"" -Verb RunAs
     }
 })
 
-$iPhase2.Add_Click({
+$script:iPhase2.Add_Click({
     $isServer = (Get-CimInstance Win32_OperatingSystem).ProductType -ne 1
     if (-not $isServer) {
         $warnMsg = if($script:isTr) { "Bu işlem sadece Windows Server sürümlerinde desteklenmektedir!`r`nMevcut işletim sisteminiz bir Server sürümü değil." } else { "This operation is only supported on Windows Server editions!`r`nYour current OS is not a Server edition." }
@@ -1385,20 +1403,32 @@ $iPhase2.Add_Click({
     }
     $res = Show-CustomMsgBox $script:strings.Phase2Msg $script:strings.InfoTitle "YesNo"
     if ($res -eq "Yes") {
-        if($script:isTr) { $txtLogs.Text += "Adım 2 başlatıldı...`r`nRDS Lisanslama rolü kuruluyor...`r`n" } else { $txtLogs.Text += "Phase 2 started...`r`nInstalling RDS Licensing role...`r`n" }
+        if($script:isTr) { $txtLogs.Text += "Adım 2 harici konsola aktarıldı. Lütfen işlemleri açılan konsol ekranından takip edin.`r`n" } else { $txtLogs.Text += "Phase 2 sent to external console. Please follow the process from the opened console screen.`r`n" }
         $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
         [System.Windows.Forms.Application]::DoEvents()
-        Install-WindowsFeature -Name RDS-Licensing -IncludeManagementTools
         
-        if($script:isTr) { $txtLogs.Text += "Servis başlatılıyor...`r`n" } else { $txtLogs.Text += "Starting service...`r`n" }
-        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
-        [System.Windows.Forms.Application]::DoEvents()
-        Start-Service TermServLicensing -ErrorAction SilentlyContinue
-        
-        if($script:isTr) { $txtLogs.Text += "İşlem başarıyla tamamlandı!`r`n" } else { $txtLogs.Text += "Process completed successfully!`r`n" }
-        $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
-        [System.Windows.Forms.Application]::DoEvents()
-        Show-CustomMsgBox $script:strings.Phase2Success $script:strings.SuccessTitle
+        $tmpScript2 = "$env:TEMP\rds_install.ps1"
+        $scriptContent2 = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+`$host.UI.RawUI.WindowTitle = if(`$$($script:isTr)) { 'RDS Kurulum (Adim 2)' } else { 'RDS Install (Phase 2)' }
+if(`$$($script:isTr)) { Write-Host "`n[Adım 2] RDS Lisanslama rolü kuruluyor. Lütfen bekleyin..." -ForegroundColor Cyan } else { Write-Host "`n[Phase 2] Installing RDS Licensing role. Please wait..." -ForegroundColor Cyan }
+`$ErrorActionPreference = 'Continue'
+Install-WindowsFeature -Name RDS-Licensing -IncludeManagementTools
+
+`$ErrorActionPreference = 'SilentlyContinue'
+if(`$$($script:isTr)) { Write-Host "`n[Adım 2] Servis başlatılıyor..." -ForegroundColor Cyan } else { Write-Host "`n[Phase 2] Starting service..." -ForegroundColor Cyan }
+Start-Service TermServLicensing
+
+Write-Host "`n-----------------------------------------------------" -ForegroundColor Yellow
+if(`$$($script:isTr)) { Write-Host "Kurulum başarıyla tamamlandı!" -ForegroundColor Green } else { Write-Host "Installation completed successfully!" -ForegroundColor Green }
+Write-Host "-----------------------------------------------------" -ForegroundColor Yellow
+
+if(`$$($script:isTr)) { Write-Host "`nPencereyi kapatmak için ENTER tuşuna basın..." -ForegroundColor Magenta } else { Write-Host "`nPress ENTER to close this window..." -ForegroundColor Magenta }
+Read-Host
+Remove-Item -Path "`$PSCommandPath" -Force
+"@
+        [System.IO.File]::WriteAllText($tmpScript2, $scriptContent2, [System.Text.Encoding]::UTF8)
+        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tmpScript2`"" -Verb RunAs
     }
 })
 
