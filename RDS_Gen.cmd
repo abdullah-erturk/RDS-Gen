@@ -1337,6 +1337,12 @@ $iPhase1 = $ctxSettings.Items.Add("RDS Sıfırla (Adım 1)")
 $iPhase2 = $ctxSettings.Items.Add("RDS Sıfırla (Adım 2)")
 
 $iPhase1.Add_Click({
+    $isServer = (Get-CimInstance Win32_OperatingSystem).ProductType -ne 1
+    if (-not $isServer) {
+        $warnMsg = if($script:isTr) { "Bu işlem sadece Windows Server sürümlerinde desteklenmektedir!`r`nMevcut işletim sisteminiz bir Server sürümü değil." } else { "This operation is only supported on Windows Server editions!`r`nYour current OS is not a Server edition." }
+        Show-CustomMsgBox $warnMsg $script:strings.WarningTitle
+        return
+    }
     $res = Show-CustomMsgBox $script:strings.Phase1Msg $script:strings.WarningTitle "YesNo"
     if ($res -eq "Yes") {
         if($script:isTr) { $txtLogs.Text += "Adım 1 başlatıldı...`r`nTermServLicensing servisi durduruluyor...`r`n" } else { $txtLogs.Text += "Phase 1 started...`r`nStopping TermServLicensing service...`r`n" }
@@ -1353,7 +1359,7 @@ $iPhase1.Add_Click({
         reg delete "HKLM\SOFTWARE\Microsoft\TermServLicensing" /f 2>$null
         reg delete "HKLM\SYSTEM\CurrentControlSet\Services\TermServLicensing" /f 2>$null
         
-        if($script:isTr) { $txtLogs.Text += "RDS Lisanslama rolü kaldırılıyor...`r`n" } else { $txtLogs.Text += "Uninstalling RDS Licensing role...`r`n" }
+        if($script:isTr) { $txtLogs.Text += "RDS Lisanslama rolü kaldırılıyor, lütfen bekleyin...`r`n" } else { $txtLogs.Text += "Uninstalling RDS Licensing role, lütfen bekleyin...`r`n" }
         $scrollThumb.Top = $scrollBg.Height - $scrollThumb.Height - 2
         [System.Windows.Forms.Application]::DoEvents()
         Uninstall-WindowsFeature -Name RDS-Licensing
@@ -1371,6 +1377,12 @@ $iPhase1.Add_Click({
 })
 
 $iPhase2.Add_Click({
+    $isServer = (Get-CimInstance Win32_OperatingSystem).ProductType -ne 1
+    if (-not $isServer) {
+        $warnMsg = if($script:isTr) { "Bu işlem sadece Windows Server sürümlerinde desteklenmektedir!`r`nMevcut işletim sisteminiz bir Server sürümü değil." } else { "This operation is only supported on Windows Server editions!`r`nYour current OS is not a Server edition." }
+        Show-CustomMsgBox $warnMsg $script:strings.WarningTitle
+        return
+    }
     $res = Show-CustomMsgBox $script:strings.Phase2Msg $script:strings.InfoTitle "YesNo"
     if ($res -eq "Yes") {
         if($script:isTr) { $txtLogs.Text += "Adım 2 başlatıldı...`r`nRDS Lisanslama rolü kuruluyor...`r`n" } else { $txtLogs.Text += "Phase 2 started...`r`nInstalling RDS Licensing role...`r`n" }
@@ -1467,7 +1479,7 @@ $btnAbout.Add_Click({
     $aboutMainPanel.BringToFront()
 
     $lblLine1 = New-Object System.Windows.Forms.Label
-    $lblLine1.Text = "Coded by Abdullah ERTÃœRK"
+    $lblLine1.Text = "Coded by Abdullah ERTÜRK"
     $lblLine1.Location = New-Object System.Drawing.Point(20, 20)
     $lblLine1.AutoSize = $true
     $lblLine1.Font = $fontBold
