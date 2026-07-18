@@ -1001,6 +1001,19 @@ $btnCmbVer.Add_Click({
     $ctxVer.Show($btnCmbVer, (New-Object System.Drawing.Point(0, $btnCmbVer.Height)))
 })
 
+try {
+    $osName = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption
+    $matchedYear = ("2025","2022","2019","2016","2012","2008","2003","2000" | Where-Object { $osName -match $_ }) | Select-Object -First 1
+    
+    if ($matchedYear) {
+        $autoVer = $versions | Where-Object { $_.Text -match $matchedYear } | Sort-Object { $_.Text -notmatch "Per User" } | Select-Object -First 1
+        if ($autoVer) {
+            $btnCmbVer.Text = $autoVer.Text
+            $btnCmbVer.Tag = $autoVer.Value
+        }
+    }
+} catch { }
+
 $btnLkp = New-Object System.Windows.Forms.Button
 $btnLkp.Text = $strings.LkpBtn
 $btnLkp.Location = New-Object System.Drawing.Point(15, 90)
@@ -1042,12 +1055,18 @@ $btnSpk.Add_Click({
         return
     }
     # Auto-format and validate
-    $inputPid = $inputPid -replace '[\s-]', ''
-    if ($inputPid.Length -eq 20) {
-        if ($inputPid.Substring(5, 3).ToUpper() -eq "OEM") {
-            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,3), $inputPid.Substring(8,7), $inputPid.Substring(15,5)
+    $origPid = $inputPid.Trim()
+    $blocks = $origPid.Split('-')
+    $isLegacyFormat = ($blocks.Length -eq 4 -and $blocks[2].Length -eq 7)
+
+    $cleanPid = $origPid -replace '[\s-]', ''
+    if ($cleanPid.Length -eq 20) {
+        if ($cleanPid.Substring(5, 3).ToUpper() -eq "OEM") { $isLegacyFormat = $true }
+
+        if ($isLegacyFormat) {
+            $inputPid = "{0}-{1}-{2}-{3}" -f $cleanPid.Substring(0,5), $cleanPid.Substring(5,3), $cleanPid.Substring(8,7), $cleanPid.Substring(15,5)
         } else {
-            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,5), $inputPid.Substring(10,5), $inputPid.Substring(15,5)
+            $inputPid = "{0}-{1}-{2}-{3}" -f $cleanPid.Substring(0,5), $cleanPid.Substring(5,5), $cleanPid.Substring(10,5), $cleanPid.Substring(15,5)
         }
         $txtPid.Text = $inputPid
     }
@@ -1082,12 +1101,18 @@ $btnSpk.Add_Click({
 $btnLkp.Add_Click({
     $inputPid = $txtPid.Text.Trim()
     # Auto-format and validate
-    $inputPid = $inputPid -replace '[\s-]', ''
-    if ($inputPid.Length -eq 20) {
-        if ($inputPid.Substring(5, 3).ToUpper() -eq "OEM") {
-            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,3), $inputPid.Substring(8,7), $inputPid.Substring(15,5)
+    $origPid = $inputPid.Trim()
+    $blocks = $origPid.Split('-')
+    $isLegacyFormat = ($blocks.Length -eq 4 -and $blocks[2].Length -eq 7)
+
+    $cleanPid = $origPid -replace '[\s-]', ''
+    if ($cleanPid.Length -eq 20) {
+        if ($cleanPid.Substring(5, 3).ToUpper() -eq "OEM") { $isLegacyFormat = $true }
+
+        if ($isLegacyFormat) {
+            $inputPid = "{0}-{1}-{2}-{3}" -f $cleanPid.Substring(0,5), $cleanPid.Substring(5,3), $cleanPid.Substring(8,7), $cleanPid.Substring(15,5)
         } else {
-            $inputPid = "{0}-{1}-{2}-{3}" -f $inputPid.Substring(0,5), $inputPid.Substring(5,5), $inputPid.Substring(10,5), $inputPid.Substring(15,5)
+            $inputPid = "{0}-{1}-{2}-{3}" -f $cleanPid.Substring(0,5), $cleanPid.Substring(5,5), $cleanPid.Substring(10,5), $cleanPid.Substring(15,5)
         }
         $txtPid.Text = $inputPid
     }
