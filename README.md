@@ -8,7 +8,7 @@
 
 ## Download Link:
 
-[![Stable?](https://img.shields.io/badge/Release-v5.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
+[![Stable?](https://img.shields.io/badge/Release-v5-brightgreen.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
 
 <br>
 <details>
