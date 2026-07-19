@@ -8,7 +8,7 @@
 
 ## Download Link:
 
-[![Stable?](https://img.shields.io/badge/Release-v4.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
+[![Stable?](https://img.shields.io/badge/Release-v5.svg?style=flat)](https://github.com/abdullah-erturk/RDS-Gen/archive/refs/heads/main.zip)
 
 <br>
 <details>
@@ -20,6 +20,7 @@
 | **v2** | 🇹🇷 Karanlık tema arayüzü, uygulama içi dil seçeneği (EN/TR), lisans sıfırlama aracı entegrasyonu ve çıktı kutusu düzeltmeleri eklendi. <hr> 🇬🇧 Dark Theme GUI, in-app language toggle (EN/TR), integrated license reset tool, and output box fixes added. |
 | **v3** | 🇹🇷 İşletim sistemi güvenlik kontrolü eklendi (İşlemlerin Windows 10/11'de hataya yol açmasını engeller). <hr> 🇬🇧 Added OS validation check (prevents feature errors on non-server OS like Win 10/11). |
 | **v4** | 🇹🇷 Yanlış (Windows OS) PID çeken büyüteç butonunun RDS Lisans Sunucusu PID otomatik algılama mantığı düzeltildi. Arayüz donmalarını önlemek için RDS kaldır/kur işlemleri bağımsız konsol (external run) mimarisine taşındı ve menü dil çevirilerindeki hatalar giderildi. <hr> 🇬🇧 Fixed automatic RDS License Server PID detection (it now fetches the correct RDS PID instead of the OS PID). Moved RDS install/uninstall operations to an independent console architecture to prevent GUI freezing, and fixed context menu language bugs. |
+| **v5** | 🇹🇷 ([PR #8](https://github.com/abdullah-erturk/RDS-Gen/pull/8)) İşletim sistemine göre Lisans Sürümü otomatik seçimi eklendi. Eski (Legacy) PID formatları (5-3-7-5) için girilen kodu bozmayan akıllı düzeltme özelliği getirildi. <hr> 🇬🇧 ([PR #8](https://github.com/abdullah-erturk/RDS-Gen/pull/8)) Added automatic License Version selection based on the current OS. Introduced smart formatting that safely preserves legacy PID structures (e.g., 5-3-7-5). |
 
 </details>
 
